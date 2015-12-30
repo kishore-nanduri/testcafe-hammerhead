@@ -1,6 +1,12 @@
+// -------------------------------------------------------------
+// WARNING: this file is used by both the client and the server.
+// Do not use any browser or node-specific API!
+// -------------------------------------------------------------
+
 import {types as tt} from "./tokentype"
 import {Parser} from "./state"
 import {has} from "./util"
+import { arrayProto, regExpProto } from '../../../../protos';
 
 const pp = Parser.prototype
 
@@ -133,19 +139,19 @@ pp.parseBindingList = function(close, allowEmpty, allowTrailingComma, allowNonId
     if (first) first = false
     else this.expect(tt.comma)
     if (allowEmpty && this.type === tt.comma) {
-      elts.push(null)
+      arrayProto.push(elts, null)
     } else if (allowTrailingComma && this.afterTrailingComma(close)) {
       break
     } else if (this.type === tt.ellipsis) {
       let rest = this.parseRest(allowNonIdent)
       this.parseBindingListItem(rest)
-      elts.push(rest)
+      arrayProto.push(elts, rest)
       this.expect(close)
       break
     } else {
       let elem = this.parseMaybeDefault(this.start, this.startLoc)
       this.parseBindingListItem(elem)
-      elts.push(elem)
+      arrayProto.push(elts, elem)
     }
   }
   return elts
@@ -172,7 +178,7 @@ pp.parseMaybeDefault = function(startPos, startLoc, left) {
 pp.checkLVal = function(expr, isBinding, checkClashes) {
   switch (expr.type) {
   case "Identifier":
-    if (this.strict && this.reservedWordsStrictBind.test(expr.name))
+    if (this.strict && regExpProto.test(this.reservedWordsStrictBind, expr.name))
       this.raise(expr.start, (isBinding ? "Binding " : "Assigning to ") + expr.name + " in strict mode")
     if (checkClashes) {
       if (has(checkClashes, expr.name))

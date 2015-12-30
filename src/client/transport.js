@@ -6,6 +6,7 @@ import settings from './settings';
 import { stringify as stringifyJSON, parse as parseJSON } from './json';
 import { isWebKit, isIE9 } from './utils/browser';
 import Promise from 'pinkie';
+import { arrayProto, functionProto } from '../protos';
 
 /*eslint-enable no-native-reassign*/
 
@@ -26,7 +27,7 @@ class Transport extends EventEmitter {
             this.useAsyncXhr = false;
 
             // NOTE: If the unloading was canceled, switch back to asynchronous XHR.
-            nativeMethods.setTimeout.call(window, () => this.useAsyncXhr = true, this.SWITCH_BACK_TO_ASYNC_XHR_DELAY);
+            functionProto.call(nativeMethods.setTimeout, window, () => this.useAsyncXhr = true, this.SWITCH_BACK_TO_ASYNC_XHR_DELAY);
         }, true);
     }
 
@@ -42,7 +43,7 @@ class Transport extends EventEmitter {
     static _storeMessage (msg) {
         var storedMessages = Transport._getStoredMessages();
 
-        storedMessages.push(msg);
+        arrayProto.push(storedMessages, msg);
 
         window.localStorage.setItem(settings.get().sessionId, stringifyJSON(storedMessages));
     }
@@ -58,7 +59,7 @@ class Transport extends EventEmitter {
 
         for (var i = 0; i < messages.length; i++) {
             if (messages[i].cmd === cmd) {
-                messages.splice(i, 1);
+                arrayProto.splice(messages, i, 1);
 
                 break;
             }
@@ -79,7 +80,7 @@ class Transport extends EventEmitter {
                 if (queueItem.callback)
                     queueItem.callback(res);
 
-                this.msgQueue[queueId].shift();
+                arrayProto.shift(this.msgQueue[queueId]);
 
                 this.emit(this.MSG_RECEIVED_EVENT, {});
 
@@ -193,7 +194,7 @@ class Transport extends EventEmitter {
                     }
 
                     if (status === 200)
-                        msgCallback.call(this);
+                        functionProto.call(msgCallback, this);
                 });
             }
             else {
@@ -222,7 +223,7 @@ class Transport extends EventEmitter {
         if (storedMessages.length) {
             window.localStorage.removeItem(settings.get().sessionId);
 
-            var tasks = storedMessages.map(item => this.queuedAsyncServiceMsg(item));
+            var tasks = arrayProto.map(storedMessages, item => this.queuedAsyncServiceMsg(item));
 
             return Promise.all(tasks);
         }
@@ -234,7 +235,7 @@ class Transport extends EventEmitter {
             if (!this.msgQueue[msg.cmd])
                 this.msgQueue[msg.cmd] = [];
 
-            this.msgQueue[msg.cmd].push({
+            arrayProto.push(this.msgQueue[msg.cmd], {
                 msg:      msg,
                 callback: resolve
             });

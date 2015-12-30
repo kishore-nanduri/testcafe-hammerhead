@@ -3,6 +3,7 @@ import Listeners from './listeners';
 import nativeMethods from '../native-methods';
 import * as browserUtils from '../../utils/browser';
 import { getActiveElement, findDocument, isInputWithoutSelectionPropertiesInFirefox } from '../../utils/dom';
+import { stringProto, functionProto, regExpProto } from '../../../protos';
 
 export default class Selection {
     constructor (eventSandbox) {
@@ -22,7 +23,7 @@ export default class Selection {
             var selectionDirection = arguments[2] || 'none';
             var el                 = this;
 
-            var isTextArea      = this.tagName && this.tagName.toLowerCase() === 'textarea';
+            var isTextArea      = this.tagName && stringProto.toLowerCase(this.tagName) === 'textarea';
             var fn              = isTextArea ? nativeMethods.textAreaSetSelectionRange : nativeMethods.setSelectionRange;
             var activeElement   = getActiveElement(findDocument(el));
             var isElementActive = false;
@@ -39,10 +40,10 @@ export default class Selection {
                 // 'display = none' and selectionStart !== selectionEnd in other IEs, the error doesn't occur, but
                 // as a result selectionStart === selectionEnd === 0.
                 try {
-                    res = fn.call(el, selectionStart, selectionEnd, selectionDirection);
+                    res = functionProto.call(fn, el, selectionStart, selectionEnd, selectionDirection);
                 }
                 catch (e) {
-                    res = fn.call(el, 0, 0, selectionDirection);
+                    res = functionProto.call(fn, el, 0, 0, selectionDirection);
                 }
 
                 if (changeType) {
@@ -79,7 +80,7 @@ export default class Selection {
             var element = this.parentElement();
 
             if (!element || getActiveElement(findDocument(element)) === element)
-                return nativeMethods.select.call(this);
+                return functionProto.call(nativeMethods.select, this);
 
             var result       = null;
             var focusRaised  = false;
@@ -90,10 +91,10 @@ export default class Selection {
 
             listeners.addInternalEventListener(document, ['focus'], focusHandler);
 
-            result = nativeMethods.select.call(this);
+            result = functionProto.call(nativeMethods.select, this);
 
-            timersSandbox.setTimeout.call(window, () => {
-                timersSandbox.setTimeout.call(window, () => {
+            functionProto.call(timersSandbox.setTimeout, window, () => {
+                functionProto.call(timersSandbox.setTimeout, window, () => {
                     listeners.removeInternalEventListener(document, ['focus'], focusHandler);
 
                     if (!focusRaised)
@@ -106,9 +107,9 @@ export default class Selection {
     }
 
     static _needChangeInputType (el) {
-        var tagName = el.tagName ? el.tagName.toLowerCase() : '';
+        var tagName = el.tagName ? stringProto.toLowerCase(el.tagName) : '';
 
-        return tagName === 'input' && (browserUtils.isWebKit && /^(number|email)$/.test(el.type));
+        return tagName === 'input' && (browserUtils.isWebKit && regExpProto.test(/^(number|email)$/, el.type));
     }
 
     setSelection (el, start, end, direction) {
@@ -199,8 +200,8 @@ export default class Selection {
 
             // NOTE: In MSEdge, focus and blur are sync.
             if (browserUtils.isIE && browserUtils.version < 12) {
-                this.timersSandbox.setTimeout.call(window, () => {
-                    this.timersSandbox.setTimeout.call(window, () => {
+                functionProto.call(this.timersSandbox.setTimeout, window, () => {
+                    functionProto.call(this.timersSandbox.setTimeout, window, () => {
                         this.listeners.removeInternalEventListener(document, ['focus'], focusHandler);
 
                         if (!focusRaised)

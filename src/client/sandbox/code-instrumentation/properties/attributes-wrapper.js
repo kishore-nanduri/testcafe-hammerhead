@@ -1,5 +1,6 @@
 import { isHammerheadAttr } from '../../../utils/dom';
 import { getStoredAttrName } from '../../../dom-processor';
+import { objectStatic, functionProto } from '../../../../protos';
 
 export default class AttributesWrapper {
     constructor (attributes) {
@@ -14,21 +15,21 @@ export default class AttributesWrapper {
                 if (storedAttrName) {
                     attr       = attr.cloneNode();
                     attr.value = storedAttrName.value;
-                    Object.defineProperty(this, attr.name, { value: attr });
+                    objectStatic.defineProperty(this, attr.name, { value: attr });
                 }
 
-                Object.defineProperty(this, length, { value: attr });
+                objectStatic.defineProperty(this, length, { value: attr });
                 length++;
             }
         }
 
-        Object.defineProperty(this, 'length', { value: length });
+        objectStatic.defineProperty(this, 'length', { value: length });
 
         this.item = index => this[index];
 
         for (var funcName in attributes) {
             if (typeof this[funcName] === 'function' && funcName !== 'item')
-                this[funcName] = attributes[funcName].bind(attributes);
+                this[funcName] = functionProto.bind(attributes[funcName], attributes);
         }
     }
 }

@@ -10,6 +10,7 @@ import { sameOriginCheck } from '../../utils/destination-location';
 import { stopPropagation } from '../../utils/event';
 import { isPageHtml, processHtml } from '../../utils/html';
 import { waitCookieMsg, cookieMsgInProgress } from '../../transport';
+import { functionProto, stringProto, arrayProto, regExpProto } from '../../../protos';
 
 export default class ElementSandbox extends SandboxBase {
     constructor (nodeSandbox, uploadSandbox, iframeSandbox, shadowUI) {
@@ -27,35 +28,35 @@ export default class ElementSandbox extends SandboxBase {
         var getAttrMeth = ns ? nativeMethods.getAttributeNS : nativeMethods.getAttribute;
 
         // OPTIMIZATION: The hasAttribute method is very slow.
-        if (ElementSandbox._isUrlAttr(el, attr) || attr === 'sandbox' || domProcessor.EVENTS.indexOf(attr) !== -1 ||
+        if (ElementSandbox._isUrlAttr(el, attr) || attr === 'sandbox' || arrayProto.indexOf(domProcessor.EVENTS, attr) !== -1 ||
             attr === 'autocomplete') {
             var storedAttr = domProcessor.getStoredAttrName(attr);
 
-            if (attr === 'autocomplete' && getAttrMeth.apply(el, ns ? [ns, storedAttr] : [storedAttr]) === 'none')
+            if (attr === 'autocomplete' && functionProto.apply(getAttrMeth, el, ns ? [ns, storedAttr] : [storedAttr]) === 'none')
                 return null;
             else if (el.hasAttribute(storedAttr))
                 attr = storedAttr;
         }
 
-        return getAttrMeth.apply(el, ns ? [ns, attr] : [attr]);
+        return functionProto.apply(getAttrMeth, el, ns ? [ns, attr] : [attr]);
     }
 
     _overridedSetAttributeCore (el, attr, value, ns) {
         var setAttrMeth         = ns ? nativeMethods.setAttributeNS : nativeMethods.setAttribute;
-        var tagName             = el.tagName.toLowerCase();
+        var tagName             = stringProto.toLowerCase(el.tagName);
         var isSupportedProtocol = urlUtils.isSupportedProtocol(value);
         var urlAttr             = ElementSandbox._isUrlAttr(el, attr);
-        var isEventAttr         = domProcessor.EVENTS.indexOf(attr) !== -1;
+        var isEventAttr         = arrayProto.indexOf(domProcessor.EVENTS, attr) !== -1;
 
         value += '';
 
         if (urlAttr && !isSupportedProtocol || isEventAttr) {
-            var isJsProtocol = domProcessor.JAVASCRIPT_PROTOCOL_REG_EX.test(value);
+            var isJsProtocol = regExpProto.test(domProcessor.JAVASCRIPT_PROTOCOL_REG_EX, value);
             var storedJsAttr = domProcessor.getStoredAttrName(attr);
 
             if (urlAttr && isJsProtocol || isEventAttr) {
-                var valueWithoutProtocol = value.replace(domProcessor.JAVASCRIPT_PROTOCOL_REG_EX, '');
-                var matches              = valueWithoutProtocol.match(domProcessor.HTML_STRING_REG_EX);
+                var valueWithoutProtocol = stringProto.replace(value, domProcessor.JAVASCRIPT_PROTOCOL_REG_EX, '');
+                var matches              = stringProto.match(valueWithoutProtocol, domProcessor.HTML_STRING_REG_EX);
                 var processedValue       = '';
 
                 if (matches && isJsProtocol) {
@@ -65,9 +66,9 @@ export default class ElementSandbox extends SandboxBase {
                     if (!isPageHtml(html))
                         html = '<html><body>' + html + '</body></html>';
 
-                    html = html.replace(new RegExp('\\\\' + stringQuote, 'g'), stringQuote);
+                    html = stringProto.replace(html, new RegExp('\\\\' + stringQuote, 'g'), stringQuote);
                     html = processHtml(html);
-                    html = html.replace(new RegExp(stringQuote, 'g'), '\\' + stringQuote);
+                    html = stringProto.replace(html, new RegExp(stringQuote, 'g'), '\\' + stringQuote);
 
                     /*eslint-disable no-script-url */
                     processedValue = 'javascript:' + stringQuote + html + stringQuote;
@@ -81,17 +82,17 @@ export default class ElementSandbox extends SandboxBase {
                 }
 
                 if (processedValue !== value) {
-                    setAttrMeth.apply(el, ns ? [ns, storedJsAttr, value] : [storedJsAttr, value]);
+                    functionProto.apply(setAttrMeth, el, ns ? [ns, storedJsAttr, value] : [storedJsAttr, value]);
                     value = processedValue;
                 }
             }
             else
-                setAttrMeth.apply(el, ns ? [ns, storedJsAttr, value] : [storedJsAttr, value]);
+                functionProto.apply(setAttrMeth, el, ns ? [ns, storedJsAttr, value] : [storedJsAttr, value]);
         }
         else if (urlAttr && isSupportedProtocol) {
             var storedUrlAttr = domProcessor.getStoredAttrName(attr);
 
-            setAttrMeth.apply(el, ns ? [ns, storedUrlAttr, value] : [storedUrlAttr, value]);
+            functionProto.apply(setAttrMeth, el, ns ? [ns, storedUrlAttr, value] : [storedUrlAttr, value]);
 
             if (tagName !== 'img') {
                 if (value !== '') {
@@ -117,23 +118,23 @@ export default class ElementSandbox extends SandboxBase {
         else if (attr === 'autocomplete') {
             var storedAutocompleteAttr = domProcessor.getStoredAttrName(attr);
 
-            setAttrMeth.apply(el, ns ? [ns, storedAutocompleteAttr, value] : [storedAutocompleteAttr, value]);
+            functionProto.apply(setAttrMeth, el, ns ? [ns, storedAutocompleteAttr, value] : [storedAutocompleteAttr, value]);
 
             value = 'off';
         }
         else if (attr === 'target' && value === '_blank' && domProcessor.TARGET_ATTR_TAGS[tagName])
             return null;
-        else if (attr === 'sandbox' && value.indexOf('allow-scripts') === -1) {
+        else if (attr === 'sandbox' && stringProto.indexOf(value, 'allow-scripts') === -1) {
             var storedSandboxAttr = domProcessor.getStoredAttrName(attr);
 
-            setAttrMeth.apply(el, ns ? [ns, storedSandboxAttr, value] : [storedSandboxAttr, value]);
+            functionProto.apply(setAttrMeth, el, ns ? [ns, storedSandboxAttr, value] : [storedSandboxAttr, value]);
             value += ' allow-scripts';
         }
         // TODO: remove after https://github.com/DevExpress/testcafe-hammerhead/issues/244 implementation
-        else if (tagName === 'meta' && ['http-equiv', 'content'].indexOf(attr) !== -1)
+        else if (tagName === 'meta' && arrayProto.indexOf(['http-equiv', 'content'], attr) !== -1)
             return null;
 
-        return setAttrMeth.apply(el, ns ? [ns, attr, value] : [attr, value]);
+        return functionProto.apply(setAttrMeth, el, ns ? [ns, attr, value] : [attr, value]);
     }
 
     _overridedRemoveAttributeCore (el, ns, arg) {
@@ -141,17 +142,17 @@ export default class ElementSandbox extends SandboxBase {
         var removeAttrFunc = ns ? nativeMethods.removeAttributeNS : nativeMethods.removeAttribute;
 
         if (ElementSandbox._isUrlAttr(el, attr) || attr === 'sandbox' || attr === 'autocomplete' ||
-            domProcessor.EVENTS.indexOf(attr) !== -1) {
+            arrayProto.indexOf(domProcessor.EVENTS, attr) !== -1) {
             var storedAttr = domProcessor.getStoredAttrName(attr);
 
             if (attr === 'autocomplete')
-                nativeMethods.setAttribute.call(el, storedAttr, 'none');
+                functionProto.call(nativeMethods.setAttribute, el, storedAttr, 'none');
             else
-                removeAttrFunc.apply(el, ns ? [arg[0], storedAttr] : [storedAttr]);
+                functionProto.apply(removeAttrFunc, el, ns ? [arg[0], storedAttr] : [storedAttr]);
         }
 
         if (attr !== 'autocomplete')
-            return removeAttrFunc.apply(el, arg);
+            return functionProto.apply(removeAttrFunc, el, arg);
     }
 
     _prepareNodeForInsertion (node, parentNode) {
@@ -167,9 +168,9 @@ export default class ElementSandbox extends SandboxBase {
 
         this.overridedMethods = {
             insertRow () {
-                var tagName    = this.tagName.toLowerCase();
+                var tagName    = stringProto.toLowerCase(this.tagName);
                 var nativeMeth = tagName === 'table' ? nativeMethods.insertTableRow : nativeMethods.insertTBodyRow;
-                var row        = nativeMeth.apply(this, arguments);
+                var row        = functionProto.apply(nativeMeth, this, arguments);
 
                 sandbox.nodeSandbox.overrideDomMethods(row);
 
@@ -177,7 +178,7 @@ export default class ElementSandbox extends SandboxBase {
             },
 
             insertCell () {
-                var cell = nativeMethods.insertCell.apply(this, arguments);
+                var cell = functionProto.apply(nativeMethods.insertCell, this, arguments);
 
                 sandbox.nodeSandbox.overrideDomMethods(cell);
 
@@ -188,7 +189,7 @@ export default class ElementSandbox extends SandboxBase {
                 if (html !== null)
                     html = processHtml('' + html, this.parentNode && this.parentNode.tagName);
 
-                nativeMethods.insertAdjacentHTML.call(this, pos, html);
+                functionProto.call(nativeMethods.insertAdjacentHTML, this, pos, html);
                 sandbox.nodeSandbox.overrideDomMethods(this.parentNode || this);
             },
 
@@ -198,10 +199,10 @@ export default class ElementSandbox extends SandboxBase {
                 // TODO: Don't wait cookie, put them in a form hidden input and parse on the server (GH-199)
                 if (cookieMsgInProgress()) {
                     waitCookieMsg()
-                        .then(() => nativeMethods.formSubmit.apply(form, arguments));
+                        .then(() => functionProto.apply(nativeMethods.formSubmit, form, arguments));
                 }
                 else
-                    nativeMethods.formSubmit.apply(form, arguments);
+                    functionProto.apply(nativeMethods.formSubmit, form, arguments);
             },
 
             insertBefore (newNode, refNode) {
@@ -216,7 +217,7 @@ export default class ElementSandbox extends SandboxBase {
                 if (domUtils.isBodyElementWithChildren(this) && !refNode && domUtils.isElementInDocument(this))
                     result = sandbox.shadowUI.insertBeforeRoot(newNode);
                 else
-                    result = nativeMethods.insertBefore.call(this, newNode, refNode);
+                    result = functionProto.call(nativeMethods.insertBefore, this, newNode, refNode);
 
                 sandbox._onElementAdded(newNode);
 
@@ -235,7 +236,7 @@ export default class ElementSandbox extends SandboxBase {
                 if (domUtils.isBodyElementWithChildren(this) && domUtils.isElementInDocument(this))
                     result = sandbox.shadowUI.insertBeforeRoot(child);
                 else
-                    result = nativeMethods.appendChild.call(this, child);
+                    result = functionProto.call(nativeMethods.appendChild, this, child);
 
                 sandbox._onElementAdded(child);
 
@@ -250,7 +251,7 @@ export default class ElementSandbox extends SandboxBase {
                         ElementSandbox._removeFileInputInfo(child);
                 }
 
-                var result = nativeMethods.removeChild.call(this, child);
+                var result = functionProto.call(nativeMethods.removeChild, this, child);
 
                 sandbox.onElementRemoved(child);
 
@@ -261,11 +262,11 @@ export default class ElementSandbox extends SandboxBase {
                 if (newChild.nodeType === 3)
                     ElementSandbox._processTextNodeContent(newChild, this);
 
-                return nativeMethods.replaceChild.call(this, newChild, oldChild);
+                return functionProto.call(nativeMethods.replaceChild, this, newChild, oldChild);
             },
 
             cloneNode () {
-                var clone = nativeMethods.cloneNode.apply(this, arguments);
+                var clone = functionProto.apply(nativeMethods.cloneNode, this, arguments);
 
                 sandbox.nodeSandbox.overrideDomMethods(clone);
 
@@ -302,7 +303,7 @@ export default class ElementSandbox extends SandboxBase {
         if (!parentNode.tagName)
             return;
 
-        var parentTagName = parentNode.tagName.toLowerCase();
+        var parentTagName = stringProto.toLowerCase(parentNode.tagName);
 
         if (parentTagName === 'script')
             node.data = processScript(node.data, true, false);
@@ -311,9 +312,9 @@ export default class ElementSandbox extends SandboxBase {
     }
 
     static _isUrlAttr (el, attr) {
-        var tagName = el.tagName.toLowerCase();
+        var tagName = stringProto.toLowerCase(el.tagName);
 
-        return domProcessor.URL_ATTR_TAGS[attr] && domProcessor.URL_ATTR_TAGS[attr].indexOf(tagName) !== -1;
+        return domProcessor.URL_ATTR_TAGS[attr] && arrayProto.indexOf(domProcessor.URL_ATTR_TAGS[attr], tagName) !== -1;
     }
 
     static _removeFileInputInfo (el) {
@@ -348,7 +349,7 @@ export default class ElementSandbox extends SandboxBase {
     }
 
     static getIframes (el) {
-        var isIframe = el.tagName && el.tagName.toLowerCase() === 'iframe';
+        var isIframe = el.tagName && stringProto.toLowerCase(el.tagName) === 'iframe';
 
         return isIframe ? [el] : el.querySelectorAll('iframe');
     }
@@ -393,7 +394,7 @@ export default class ElementSandbox extends SandboxBase {
 
     overrideElement (el) {
         var isDocFragment = el.nodeType === 11;
-        var elTagName     = el.tagName && el.tagName.toLowerCase();
+        var elTagName     = el.tagName && stringProto.toLowerCase(el.tagName);
         var isForm        = elTagName === 'form';
         var isIframe      = elTagName === 'iframe';
 
@@ -402,10 +403,10 @@ export default class ElementSandbox extends SandboxBase {
 
         if (elTagName === 'img') {
             el.addEventListener('error', e => {
-                var storedAttr = nativeMethods.getAttribute.call(el, domProcessor.getStoredAttrName('src'));
+                var storedAttr = functionProto.call(nativeMethods.getAttribute, el, domProcessor.getStoredAttrName('src'));
 
                 if (storedAttr && !urlUtils.parseProxyUrl(el.src) && urlUtils.isSupportedProtocol(el.src)) {
-                    nativeMethods.setAttribute.call(el, 'src', urlUtils.getProxyUrl(storedAttr));
+                    functionProto.call(nativeMethods.setAttribute, el, 'src', urlUtils.getProxyUrl(storedAttr));
                     stopPropagation(e);
                 }
             }, false);

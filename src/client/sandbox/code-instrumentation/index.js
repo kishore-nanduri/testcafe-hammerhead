@@ -5,6 +5,7 @@ import MethodCallInstrumentation from './methods';
 import { getAttributeProperty } from './properties/attributes';
 import { processScript } from '../../../processing/script';
 import INSTRUCTION from '../../../processing/script/instruction';
+import { arrayProto } from '../../../protos';
 
 export default class CodeInstrumentation extends SandboxBase {
     constructor (nodeMutation, eventSandbox, cookieSandbox, uploadSandbox, shadowUI) {
@@ -53,7 +54,7 @@ export default class CodeInstrumentation extends SandboxBase {
                     // since it may leak the arguments object.
                     // See: https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Functions/arguments
                     for (var i = 1; i < script.length; i++)
-                        args.push(script[i]);
+                        arrayProto.push(args, script[i]);
 
                     return args;
                 }

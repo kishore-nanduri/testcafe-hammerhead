@@ -2,6 +2,7 @@ import SandboxBase from './base';
 import nativeMethods from './native-methods';
 import { processScript } from '../../processing/script';
 import { isIE, version as browserVersion } from '../utils/browser';
+import { arrayProto, functionProto } from '../../protos';
 
 // NOTE: When you call the focus and blur function for some elements in IE, the event handlers  must be raised
 // asynchronously, but before executing functions that are called by using the window.setTimeout function. So,
@@ -46,8 +47,8 @@ export default class TimersSandbox extends SandboxBase {
             var curHandlers = [];
 
             for (var i = 0; i < this.timeouts.length; i++) {
-                curTimeouts.push(this.timeouts[i]);
-                curHandlers.push(this.deferredFunctions[i]);
+                arrayProto.push(curTimeouts, this.timeouts[i]);
+                arrayProto.push(curHandlers, this.deferredFunctions[i]);
             }
 
             this.timeouts          = [];
@@ -62,7 +63,7 @@ export default class TimersSandbox extends SandboxBase {
             return this._callDeferredFunction(fn, args);
         }
 
-        return fn.apply(this.window, args);
+        return functionProto.apply(fn, this.window, args);
     }
 
     attach (window) {
@@ -78,7 +79,7 @@ export default class TimersSandbox extends SandboxBase {
             for (var i = 0; i < args.length; ++i)
                 args[i] = arguments[i];
 
-            return nativeMethods.setTimeout.apply(window, timersSandbox._wrapTimeoutFunctionsArguments(args));
+            return functionProto.apply(nativeMethods.setTimeout, window, timersSandbox._wrapTimeoutFunctionsArguments(args));
         };
 
         window.setInterval = function () {
@@ -89,7 +90,7 @@ export default class TimersSandbox extends SandboxBase {
             for (var i = 0; i < args.length; ++i)
                 args[i] = arguments[i];
 
-            return nativeMethods.setInterval.apply(window, timersSandbox._wrapTimeoutFunctionsArguments(args));
+            return functionProto.apply(nativeMethods.setInterval, window, timersSandbox._wrapTimeoutFunctionsArguments(args));
         };
 
         // NOTE: We are saving the setTimeout wrapper for internal use in case the page-script replaces
@@ -103,16 +104,16 @@ export default class TimersSandbox extends SandboxBase {
 
             for (var i = 0; i < this.deferredFunctions.length; i++) {
                 if (this.deferredFunctions[i] === deferredFunction) {
-                    this.deferredFunctions.splice(i, 1);
-                    this.timeouts.splice(i, 1);
+                    arrayProto.splice(this.deferredFunctions, i, 1);
+                    arrayProto.splice(this.timeouts, i, 1);
 
                     break;
                 }
             }
         };
 
-        this.deferredFunctions.push(deferredFunction);
-        this.timeouts.push(nativeMethods.setTimeout.call(window, deferredFunction, 0));
+        arrayProto.push(this.deferredFunctions, deferredFunction);
+        arrayProto.push(this.timeouts, functionProto.call(nativeMethods.setTimeout, window, deferredFunction, 0));
     }
 }
 

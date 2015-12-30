@@ -1,3 +1,5 @@
+import { arrayProto, stringProto } from '../../../protos';
+
 export default class FileListWrapper {
     constructor (fileList) {
         this.length = fileList.length;
@@ -15,13 +17,13 @@ export default class FileListWrapper {
         var byteArrays     = [];
 
         for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
-            var slice       = byteCharacters.slice(offset, offset + sliceSize);
+            var slice       = arrayProto.slice(byteCharacters, offset, offset + sliceSize);
             var byteNumbers = new Array(slice.length);
 
             for (var i = 0; i < slice.length; i++)
-                byteNumbers[i] = slice.charCodeAt(i);
+                byteNumbers[i] = stringProto.charCodeAt(slice, i);
 
-            byteArrays.push(new Uint8Array(byteNumbers));
+            arrayProto.push(byteArrays, new Uint8Array(byteNumbers));
         }
 
         return new Blob(byteArrays, { type: mimeType });

@@ -19,6 +19,7 @@ import locationSetTransformer from './location-set';
 import propertyGetTransformer from './property-get';
 import propertySetTransformer from './property-set';
 import methodCallTransformer from './method-call';
+import { arrayProto } from '../../../protos';
 
 
 const TRANSFORMERS = [
@@ -53,7 +54,7 @@ export default (function createTransformerMap () {
             if (!transformerMap[nodeType])
                 transformerMap[nodeType] = [];
 
-            transformerMap[nodeType].push(transformer);
+            arrayProto.push(transformerMap[nodeType], transformer);
         }
     }
 

@@ -4,10 +4,11 @@
 // -------------------------------------------------------------
 
 import transformers from './transformers';
+import { arrayProto, functionProto } from '../../protos';
 
 function replaceNode (node, newNode, parent, key) {
     if (key === 'arguments' || key === 'elements' || key === 'expressions') {
-        var idx = parent[key].indexOf(node);
+        var idx = arrayProto.indexOf(parent[key], node);
 
         parent[key][idx] = newNode;
     }
@@ -23,7 +24,7 @@ function transformChildNodes (node) {
         if (node.hasOwnProperty(key)) {
             var childNode = node[key];
 
-            if (Object.prototype.toString.call(childNode) === '[object Array]') {
+            if (functionProto.call(Object.prototype.toString, childNode) === '[object Array]') {
                 for (var j = 0; j < childNode.length; j++)
                     changed = transform(childNode[j], node, key) || changed;
             }

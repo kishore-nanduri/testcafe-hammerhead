@@ -1,6 +1,7 @@
 import * as sharedUrlUtils from '../../utils/url';
 import * as domUtils from './dom';
 import { get as getSettings } from '../settings';
+import { stringProto } from '../../protos';
 
 const DOCUMENT_URL_RESOLVER = 'hammerhead|document-url-resolver';
 
@@ -46,7 +47,7 @@ export function getResolver (doc) {
 export function resolveUrl (url, doc) {
     url = sharedUrlUtils.prepareUrl(url);
 
-    if (url && url.indexOf('//') === 0)
+    if (url && stringProto.indexOf(url, '//') === 0)
         url = getParsed().protocol + url;
 
     var urlResolver = getResolver(doc || document);
@@ -60,7 +61,7 @@ export function resolveUrl (url, doc) {
         // iframe) you cannot set a relative link href while the iframe loading is not completed. So, we'll do it with
         // the parent's urlResolver Safari demonstrates similar behavior, but urlResolver.href has a relative URL value.
         var needUseParentResolver = url && isIframeWithoutSrc && window.parent && window.parent.document &&
-                                    (!urlResolver.href || urlResolver.href.indexOf('/') === 0);
+                                    (!urlResolver.href || stringProto.indexOf(urlResolver.href, '/') === 0);
 
         if (needUseParentResolver)
             return resolveUrl(url, window.parent.document);
@@ -79,7 +80,7 @@ export function withHash (hash) {
     var location = get();
 
     // NOTE: Remove the previous hash if there is any.
-    location = location.replace(/(#.*)$/, '');
+    location = stringProto.replace(location, /(#.*)$/, '');
 
     return location + hash;
 }
@@ -87,7 +88,7 @@ export function withHash (hash) {
 export function getCookiePathPrefix () {
     var parsedLocation = sharedUrlUtils.parseProxyUrl(getLocation());
 
-    return parsedLocation.partAfterHost.replace(parsedLocation.destResourceInfo.partAfterHost, '');
+    return stringProto.replace(parsedLocation.partAfterHost, parsedLocation.destResourceInfo.partAfterHost, '');
 }
 
 export function getParsed () {
@@ -99,7 +100,7 @@ export function getParsed () {
     resolver.href = get();
 
     // NOTE: IE ignores the first '/' symbol in the pathname.
-    var pathname = resolver.pathname.indexOf('/') === 0 ? resolver.pathname : '/' + resolver.pathname;
+    var pathname = stringProto.indexOf(resolver.pathname, '/') === 0 ? resolver.pathname : '/' + resolver.pathname;
 
     // TODO: Describe default ports logic.
     return {
@@ -108,7 +109,7 @@ export function getParsed () {
         port:     parsedDest.port ? resolver.port : '',
         hostname: resolver.hostname,
         // NOTE: Remove the default port from the host.
-        host:     parsedDest.port ? resolver.host : resolver.host.replace(/:\d+$/, ''),
+        host:     parsedDest.port ? resolver.host : stringProto.replace(resolver.host, /:\d+$/, ''),
         pathname: pathname,
         hash:     resolver.hash,
         search:   resolver.search

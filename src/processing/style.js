@@ -2,8 +2,10 @@
 // WARNING: this file is used by both the client and the server.
 // Do not use any browser or node-specific API!
 // -------------------------------------------------------------
+/* eslint hammerhead/proto-methods: 2 */
 
 import INTERNAL_ATTRS from '../processing/dom/internal-attributes';
+import { regExpProto, stringProto } from '../protos';
 
 const SOURCE_MAP_REG_EX              = /#\s*sourceMappingURL\s*=\s*[^\s]+(\s|\*\/)/i;
 const CSS_URL_PROPERTY_VALUE_PATTERN = /(url\s*\(\s*)(?:(')([^\s']*)(')|(")([^\s"]*)(")|([^\s\)]*))(\s*\))|(@import\s+)(?:(')([^\s']*)(')|(")([^\s"]*)("))/g;
@@ -15,17 +17,17 @@ class StyleProcessor {
 
     process (css, urlReplacer, isStylesheetTable) {
         var isStyleSheetProcessingRegEx = new RegExp('^\\s*' +
-                                                     this.IS_STYLESHEET_PROCESSED_COMMENT.replace(/\/|\*/g, '\\$&'));
-        var isStylesheetProcessed       = isStyleSheetProcessingRegEx.test(css);
+                                                     stringProto.replace(this.IS_STYLESHEET_PROCESSED_COMMENT, /\/|\*/g, '\\$&'));
+        var isStylesheetProcessed       = regExpProto.test(isStyleSheetProcessingRegEx, css);
 
         if (typeof css === 'string' && !isStylesheetProcessed) {
             var prefix = isStylesheetTable ? this.IS_STYLESHEET_PROCESSED_COMMENT + '\n' : '';
 
             // NOTE: Replace the :hover pseudo-class.
-            css = css.replace(/\s*:\s*hover(\W)/gi, '[' + INTERNAL_ATTRS.hoverPseudoClass + ']$1');
+            css = stringProto.replace(css, /\s*:\s*hover(\W)/gi, '[' + INTERNAL_ATTRS.hoverPseudoClass + ']$1');
 
             // NOTE: Remove the ‘source map’ directive.
-            css = css.replace(SOURCE_MAP_REG_EX, '$1');
+            css = stringProto.replace(css, SOURCE_MAP_REG_EX, '$1');
 
             // NOTE: Replace URLs in CSS rules with proxy URLs.
             return prefix + this._replaceStylsheetUrls(css, urlReplacer);
@@ -36,7 +38,7 @@ class StyleProcessor {
 
     cleanUp (css, parseProxyUrl) {
         if (typeof css === 'string') {
-            css = css.replace(new RegExp('\\[' + INTERNAL_ATTRS.hoverPseudoClass + '\\](\\W)', 'ig'), ':hover$1');
+            css = stringProto.replace(css, new RegExp('\\[' + INTERNAL_ATTRS.hoverPseudoClass + '\\](\\W)', 'ig'), ':hover$1');
 
             return this._replaceStylsheetUrls(css, url => {
                 var parsedProxyUrl = parseProxyUrl(url);
@@ -49,7 +51,8 @@ class StyleProcessor {
     }
 
     _replaceStylsheetUrls (css, processor) {
-        return css.replace(
+        return stringProto.replace(
+            css,
             CSS_URL_PROPERTY_VALUE_PATTERN,
             (match, prefix1, openQuote1, url1, closeQuote1, openQuote2, url2, closeQuote2, url3, postfix,
              prefix2, openQuote3, url4, closeQuote3, openQuote4, url5, closeQuote4) => {

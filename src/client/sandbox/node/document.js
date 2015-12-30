@@ -5,6 +5,7 @@ import nativeMethods from '../native-methods';
 import * as htmlUtils from '../../utils/html';
 import { isFirefox, isIE, isIE9, isIE10 } from '../../utils/browser';
 import { isIframeWithoutSrc, getFrameElement } from '../../utils/dom';
+import { arrayProto, functionProto } from '../../../protos';
 
 export default class DocumentSandbox extends SandboxBase {
     constructor (nodeSandbox) {
@@ -38,7 +39,7 @@ export default class DocumentSandbox extends SandboxBase {
     }
 
     _overridedDocumentWrite (args, ln) {
-        args = Array.prototype.slice.call(args);
+        args = arrayProto.slice(args);
 
         var separator = ln ? '\n' : '';
         var lastArg   = args.length ? args[args.length - 1] : '';
@@ -51,9 +52,9 @@ export default class DocumentSandbox extends SandboxBase {
             this.writeBlockCounter--;
 
         if (isBegin || isEnd)
-            args.pop();
+            arrayProto.pop(args);
 
-        var str = separator + args.join(separator);
+        var str = separator + arrayProto.join(args, separator);
 
         var needWriteOnEndMarker = isEnd && !this.writeBlockCounter;
 
@@ -81,7 +82,7 @@ export default class DocumentSandbox extends SandboxBase {
         if ((isFirefox || isIE) && !htmlUtils.isPageHtml(str))
             str = htmlUtils.INIT_SCRIPT_FOR_IFRAME_TEMPLATE + str;
 
-        var result = nativeMethods.documentWrite.call(this.document, str);
+        var result = functionProto.call(nativeMethods.documentWrite, this.document, str);
 
         if (shouldEmitEvents) {
             this.nodeSandbox.mutation.onDocumentCleaned({
@@ -106,7 +107,7 @@ export default class DocumentSandbox extends SandboxBase {
         if (frameElement && !isIframeWithoutSrc(frameElement) && (isIE9 || isIE10)) {
             this.readyStateForIE = 'loading';
 
-            nativeMethods.addEventListener.call(this.document, 'DOMContentLoaded', () => this.readyStateForIE = null);
+            functionProto.call(nativeMethods.addEventListener, this.document, 'DOMContentLoaded', () => this.readyStateForIE = null);
         }
 
         var documentSandbox = this;
@@ -117,7 +118,7 @@ export default class DocumentSandbox extends SandboxBase {
             if (!isUninitializedIframe)
                 this._beforeDocumentCleaned();
 
-            var result = nativeMethods.documentOpen.call(document);
+            var result = functionProto.call(nativeMethods.documentOpen, document);
 
             if (!isUninitializedIframe)
                 this.nodeSandbox.mutation.onDocumentCleaned({ window, document });
@@ -136,7 +137,7 @@ export default class DocumentSandbox extends SandboxBase {
             if (isIE && !IframeSandbox.isWindowInited(window))
                 nativeMethods.restoreDocumentMeths(document);
 
-            var result = nativeMethods.documentClose.call(document);
+            var result = functionProto.call(nativeMethods.documentClose, document);
 
             if (!this._isUninitializedIframeWithoutSrc())
                 this._onDocumentClosed();
@@ -145,7 +146,7 @@ export default class DocumentSandbox extends SandboxBase {
         };
 
         document.createElement = tagName => {
-            var el = nativeMethods.createElement.call(document, tagName);
+            var el = functionProto.call(nativeMethods.createElement, document, tagName);
 
             this.nodeSandbox.overrideDomMethods(el);
 
@@ -153,7 +154,7 @@ export default class DocumentSandbox extends SandboxBase {
         };
 
         document.createElementNS = (ns, tagName) => {
-            var el = nativeMethods.createElementNS.call(document, ns, tagName);
+            var el = functionProto.call(nativeMethods.createElementNS, document, ns, tagName);
 
             this.nodeSandbox.overrideDomMethods(el);
 
@@ -169,7 +170,7 @@ export default class DocumentSandbox extends SandboxBase {
         };
 
         document.createDocumentFragment = function () {
-            var fragment = nativeMethods.createDocumentFragment.apply(document, arguments);
+            var fragment = functionProto.apply(nativeMethods.createDocumentFragment, document, arguments);
 
             documentSandbox.nodeSandbox.overrideDomMethods(fragment);
 

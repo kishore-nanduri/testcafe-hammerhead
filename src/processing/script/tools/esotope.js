@@ -36,6 +36,7 @@
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+import { regExpProto, functionProto, stringProto } from '../../../protos';
 
 'use strict';
 
@@ -278,7 +279,7 @@ function isIdentifierCh (cp) {
 
     var ch = String.fromCharCode(cp);
 
-    return NON_ASCII_IDENTIFIER_CHARACTERS_REGEXP.test(ch);
+    return regExpProto.test(NON_ASCII_IDENTIFIER_CHARACTERS_REGEXP, ch);
 }
 
 function isLineTerminator (cp) {
@@ -287,7 +288,7 @@ function isLineTerminator (cp) {
 
 function isWhitespace (cp) {
     return cp === 0x20 || cp === 0x09 || isLineTerminator(cp) || cp === 0x0B || cp === 0x0C || cp === 0xA0 ||
-           (cp >= 0x1680 && NON_ASCII_WHITESPACES.indexOf(cp) >= 0);
+           (cp >= 0x1680 && regExpProto.indexOf(NON_ASCII_WHITESPACES, cp) >= 0);
 }
 
 function isDecimalDigit (cp) {
@@ -309,7 +310,7 @@ function stringRepeat (str, num) {
 isArray = Array.isArray;
 if (!isArray) {
     isArray = function isArray (array) {
-        return Object.prototype.toString.call(array) === '[object Array]';
+        return functionProto.call(Object.prototype.toString, array) === '[object Array]';
     };
 }
 
@@ -352,32 +353,32 @@ function generateNumber (value) {
         return result;
     }
 
-    point = result.indexOf('.');
+    point = stringProto.indexOf(result, '.');
     //NOTE: 0x30 == '0'
-    if (!json && result.charCodeAt(0) === 0x30 && point === 1) {
+    if (!json && stringProto.charCodeAt(result, 0) === 0x30 && point === 1) {
         point  = 0;
-        result = result.slice(1);
+        result = stringProto.slice(result, 1);
     }
     temp     = result;
-    result   = result.replace('e+', 'e');
+    result   = stringProto.replace(result, 'e+', 'e');
     exponent = 0;
-    if ((pos = temp.indexOf('e')) > 0) {
-        exponent = +temp.slice(pos + 1);
-        temp     = temp.slice(0, pos);
+    if ((pos = stringProto.indexOf(temp, 'e')) > 0) {
+        exponent = +stringProto.slice(temp, pos + 1);
+        temp     = stringProto.slice(temp, 0, pos);
     }
     if (point >= 0) {
         exponent -= temp.length - point - 1;
-        temp = +(temp.slice(0, point) + temp.slice(point + 1)) + '';
+        temp = +(stringProto.slice(temp, 0, point) + stringProto.slice(temp, point + 1)) + '';
     }
     pos = 0;
 
     //NOTE: 0x30 == '0'
-    while (temp.charCodeAt(temp.length + pos - 1) === 0x30) {
+    while (stringProto.charCodeAt(temp, temp.length + pos - 1) === 0x30) {
         --pos;
     }
     if (pos !== 0) {
         exponent -= pos;
-        temp = temp.slice(0, pos);
+        temp = stringProto.slice(temp, 0, pos);
     }
     if (exponent !== 0) {
         temp += 'e' + exponent;
@@ -414,7 +415,7 @@ function generateRegExp (reg) {
 
     if (reg.source) {
         // extract flag from toString result
-        match = result.match(/\/([^/]*)$/);
+        match = stringProto.match(result, /\/([^/]*)$/);
         if (!match) {
             return result;
         }
@@ -425,7 +426,7 @@ function generateRegExp (reg) {
         characterInBrack    = false;
         previousIsBackslash = false;
         for (i = 0, iz = reg.source.length; i < iz; ++i) {
-            ch = reg.source.charCodeAt(i);
+            ch = stringProto.charCodeAt(reg.source, i);
 
             if (!previousIsBackslash) {
                 if (characterInBrack) {
@@ -472,9 +473,9 @@ function escapeAllowedCharacter (code, next) {
             result += 't';
             break;
         default:
-            hex = code.toString(16).toUpperCase();
+            hex = stringProto.toUpperCase(code.toString(16));
             if (json || code > 0xFF) {
-                result += 'u' + '0000'.slice(hex.length) + hex;
+                result += 'u' + stringProto.slice('0000', hex.length) + hex;
             }
 
             else if (code === 0x0000 && !isDecimalDigit(next)) {
@@ -486,7 +487,7 @@ function escapeAllowedCharacter (code, next) {
             }
 
             else {
-                result += 'x' + '00'.slice(hex.length) + hex;
+                result += 'x' + stringProto.slice('00', hex.length) + hex;
             }
             break;
     }
@@ -525,7 +526,7 @@ function escapeDirective (str) {
 
     quote = quotes === 'double' ? '"' : '\'';
     for (i = 0, iz = str.length; i < iz; ++i) {
-        code = str.charCodeAt(i);
+        code = stringProto.charCodeAt(str, i);
         if (code === 0x27) {            // '
             quote = '"';
             break;
@@ -546,7 +547,7 @@ function escapeString (str) {
     var result = '', i, len, code, singleQuotes = 0, doubleQuotes = 0, single, quote;
     //TODO http://jsperf.com/character-counting/8
     for (i = 0, len = str.length; i < len; ++i) {
-        code = str.charCodeAt(i);
+        code = stringProto.charCodeAt(str, i);
         if (code === 0x27) {           // '
             ++singleQuotes;
         }
@@ -562,7 +563,7 @@ function escapeString (str) {
         }
         else if ((json && code < 0x20) ||                                     // SP
                  !(json || escapeless || (code >= 0x20 && code <= 0x7E))) {   // SP, ~
-            result += escapeAllowedCharacter(code, str.charCodeAt(i + 1));
+            result += escapeAllowedCharacter(code, stringProto.charCodeAt(str, i + 1));
             continue;
         }
         result += String.fromCharCode(code);
@@ -579,7 +580,7 @@ function escapeString (str) {
     result = quote;
 
     for (i = 0, len = str.length; i < len; ++i) {
-        code = str.charCodeAt(i);
+        code = stringProto.charCodeAt(str, i);
         if ((code === 0x27 && single) || (code === 0x22 && !single)) {    // ', "
             result += '\\';
         }
@@ -597,8 +598,8 @@ function join (l, r) {
     if (!r.length)
         return l;
 
-    var lCp = l.charCodeAt(l.length - 1),
-        rCp = r.charCodeAt(0);
+    var lCp = stringProto.charCodeAt(l, l.length - 1),
+        rCp = stringProto.charCodeAt(r, 0);
 
     if (isIdentifierCh(lCp) && isIdentifierCh(rCp) ||
         lCp === rCp && (lCp === 0x2B || lCp === 0x2D) ||   // + +, - -
@@ -644,7 +645,7 @@ function generateVerbatim ($expr, settings) {
                        verbatim.precedence !== void 0 ? verbatim.precedence : Precedence.Sequence,
         parenthesize = precedence < settings.precedence,
         content      = strVerbatim ? verbatim : verbatim.content,
-        chunks       = content.split(/\r\n|\n/),
+        chunks       = stringProto.split(content, /\r\n|\n/),
         chunkCount   = chunks.length;
 
     if (parenthesize)
@@ -727,7 +728,7 @@ function generateFunctionBody ($node) {
 
         var exprJs = exprToJs($body, Preset.e4);
 
-        if (exprJs.charAt(0) === '{')
+        if (stringProto.charAt(exprJs, 0) === '{')
             exprJs = '(' + exprJs + ')';
 
         _.js += exprJs;
@@ -986,7 +987,7 @@ function generateLogicalOrBinaryExpression ($expr, settings) {
         _.js += '(';
 
     // 0x2F = '/'
-    if (exprJs.charCodeAt(exprJs.length - 1) === 0x2F && isIdentifierCh(op.charCodeAt(0)))
+    if (stringProto.charCodeAt(exprJs, exprJs.length - 1) === 0x2F && isIdentifierCh(stringProto.charCodeAt(op, 0)))
         exprJs = exprJs + _.space + op;
 
     else
@@ -997,7 +998,7 @@ function generateLogicalOrBinaryExpression ($expr, settings) {
     var rightJs = exprToJs($expr.right, operandGenSettings);
 
     //NOTE: If '/' concats with '/' or `<` concats with `!--`, it is interpreted as comment start
-    if (op === '/' && rightJs.charAt(0) === '/' || op.slice(-1) === '<' && rightJs.slice(0, 3) === '!--')
+    if (op === '/' && stringProto.charAt(rightJs, 0) === '/' || stringProto.slice(op, -1) === '<' && stringProto.slice(rightJs, 0, 3) === '!--')
         exprJs += _.space + rightJs;
 
     else
@@ -1247,7 +1248,7 @@ var ExprRawGen = {
             // then we should add a floating point.
 
             var numJs     = exprToJs($obj, Preset.e11(settings.allowCall)),
-                withPoint = LAST_DECIMAL_DIGIT_REGEXP.test(numJs) && !FLOATING_OR_OCTAL_REGEXP.test(numJs);
+                withPoint = regExpProto.test(LAST_DECIMAL_DIGIT_REGEXP, numJs) && !regExpProto.test(FLOATING_OR_OCTAL_REGEXP, numJs);
 
             _.js += withPoint ? (numJs + '.') : numJs;
         }
@@ -1286,8 +1287,8 @@ var ExprRawGen = {
 
             //NOTE: Prevent inserting spaces between operator and argument if it is unnecessary
             // like, `!cond`
-            var leftCp  = op.charCodeAt(op.length - 1),
-                rightCp = argJs.charCodeAt(0);
+            var leftCp  = stringProto.charCodeAt(op, op.length - 1),
+                rightCp = stringProto.charCodeAt(argJs, 0);
 
             // 0x2B = '+', 0x2D =  '-'
             if (leftCp === rightCp && (leftCp === 0x2B || leftCp === 0x2D) ||
@@ -1905,7 +1906,7 @@ var StmtRawGen = {
 
     ExpressionStatement: function generateExpressionStatement ($stmt, settings) {
         var exprJs       = exprToJs($stmt.expression, Preset.e5),
-            parenthesize = EXPR_STMT_UNALLOWED_EXPR_REGEXP.test(exprJs) ||
+            parenthesize = regExpProto.test(EXPR_STMT_UNALLOWED_EXPR_REGEXP, exprJs) ||
                            (directive &&
                             settings.directiveContext &&
                             $stmt.expression.type === Syntax.Literal &&

@@ -18,6 +18,7 @@
 
 import {types as tt} from "./tokentype"
 import {Parser} from "./state"
+import { arrayProto, functionProto, stringProto, regExpProto } from '../../../../protos';
 
 const pp = Parser.prototype
 
@@ -80,7 +81,7 @@ pp.parseExpression = function(noIn, refDestructuringErrors) {
   if (this.type === tt.comma) {
     let node = this.startNodeAt(startPos, startLoc)
     node.expressions = [expr]
-    while (this.eat(tt.comma)) node.expressions.push(this.parseMaybeAssign(noIn, refDestructuringErrors))
+    while (this.eat(tt.comma)) arrayProto.push(node.expressions, this.parseMaybeAssign(noIn, refDestructuringErrors))
     return this.finishNode(node, "SequenceExpression")
   }
   return expr
@@ -101,7 +102,7 @@ pp.parseMaybeAssign = function(noIn, refDestructuringErrors, afterLeftParse) {
   if (this.type == tt.parenL || this.type == tt.name)
     this.potentialArrowAt = this.start
   let left = this.parseMaybeConditional(noIn, refDestructuringErrors)
-  if (afterLeftParse) left = afterLeftParse.call(this, left, startPos, startLoc)
+  if (afterLeftParse) left = functionProto.call(afterLeftParse, this, left, startPos, startLoc)
   if (this.type.isAssign) {
     if (validateDestructuring) this.checkPatternErrors(refDestructuringErrors, true)
     let node = this.startNodeAt(startPos, startLoc)
@@ -204,7 +205,7 @@ pp.parseMaybeUnary = function(refDestructuringErrors) {
 pp.parseExprSubscripts = function(refDestructuringErrors) {
   let startPos = this.start, startLoc = this.startLoc
   let expr = this.parseExprAtom(refDestructuringErrors)
-  let skipArrowSubscripts = expr.type === "ArrowFunctionExpression" && this.input.slice(this.lastTokStart, this.lastTokEnd) !== ")";
+  let skipArrowSubscripts = expr.type === "ArrowFunctionExpression" && stringProto.slice(this.input, this.lastTokStart, this.lastTokEnd) !== ")";
   if (this.checkExpressionErrors(refDestructuringErrors) || skipArrowSubscripts) return expr
   return this.parseSubscripts(expr, startPos, startLoc)
 }
@@ -321,7 +322,7 @@ pp.parseExprAtom = function(refDestructuringErrors) {
 pp.parseLiteral = function(value) {
   let node = this.startNode()
   node.value = value
-  node.raw = this.input.slice(this.start, this.end)
+  node.raw = stringProto.slice(this.input, this.start, this.end)
   this.next()
   return this.finishNode(node, "Literal")
 }
@@ -349,13 +350,13 @@ pp.parseParenAndDistinguishExpression = function(canBeArrow) {
       first ? first = false : this.expect(tt.comma)
       if (this.type === tt.ellipsis) {
         spreadStart = this.start
-        exprList.push(this.parseParenItem(this.parseRest()))
+        arrayProto.push(exprList, this.parseParenItem(this.parseRest()))
         break
       } else {
         if (this.type === tt.parenL && !innerParenStart) {
           innerParenStart = this.start
         }
-        exprList.push(this.parseMaybeAssign(false, refDestructuringErrors, this.parseParenItem))
+        arrayProto.push(exprList, this.parseMaybeAssign(false, refDestructuringErrors, this.parseParenItem))
       }
     }
     let innerEndPos = this.start, innerEndLoc = this.startLoc
@@ -429,7 +430,7 @@ pp.parseNew = function() {
 pp.parseTemplateElement = function() {
   let elem = this.startNode()
   elem.value = {
-    raw: this.input.slice(this.start, this.end).replace(/\r\n?/g, '\n'),
+    raw: stringProto.replace(stringProto.slice(this.input, this.start, this.end), /\r\n?/g, '\n'),
     cooked: this.value
   }
   this.next()
@@ -445,9 +446,9 @@ pp.parseTemplate = function() {
   node.quasis = [curElt]
   while (!curElt.tail) {
     this.expect(tt.dollarBraceL)
-    node.expressions.push(this.parseExpression())
+    arrayProto.push(node.expressions, this.parseExpression())
     this.expect(tt.braceR)
-    node.quasis.push(curElt = this.parseTemplateElement())
+    arrayProto.push(node.quasis, curElt = this.parseTemplateElement())
   }
   this.next()
   return this.finishNode(node, "TemplateLiteral")
@@ -479,7 +480,7 @@ pp.parseObj = function(isPattern, refDestructuringErrors) {
     this.parsePropertyName(prop)
     this.parsePropertyValue(prop, isPattern, isGenerator, startPos, startLoc, refDestructuringErrors)
     this.checkPropClash(prop, propHash)
-    node.properties.push(this.finishNode(prop, "Property"))
+    arrayProto.push(node.properties, this.finishNode(prop, "Property"))
   }
   return this.finishNode(node, isPattern ? "ObjectPattern" : "ObjectExpression")
 }
@@ -511,8 +512,8 @@ pp.parsePropertyValue = function(prop, isPattern, isGenerator, startPos, startLo
     } else if (this.options.ecmaVersion >= 6 && !prop.computed && prop.key.type === "Identifier") {
       prop.kind = "init"
       if (isPattern) {
-        if (this.keywords.test(prop.key.name) ||
-            (this.strict ? this.reservedWordsStrictBind : this.reservedWords).test(prop.key.name))
+        if (regExpProto.test(this.keywords, prop.key.name) ||
+            regExpProto.test(this.strict ? this.reservedWordsStrictBind : this.reservedWords, prop.key.name))
           this.raise(prop.key.start, "Binding " + prop.key.name)
         prop.value = this.parseMaybeDefault(startPos, startLoc, prop.key)
       } else if (this.type === tt.eq && refDestructuringErrors) {
@@ -638,7 +639,7 @@ pp.parseExprList = function(close, allowTrailingComma, allowEmpty, refDestructur
       elt = this.parseSpread(refDestructuringErrors)
     else
       elt = this.parseMaybeAssign(false, refDestructuringErrors)
-    elts.push(elt)
+    arrayProto.push(elts, elt)
   }
   return elts
 }
@@ -651,9 +652,9 @@ pp.parseIdent = function(liberal) {
   let node = this.startNode()
   if (liberal && this.options.allowReserved == "never") liberal = false
   if (this.type === tt.name) {
-    if (!liberal && (this.strict ? this.reservedWordsStrict : this.reservedWords).test(this.value) &&
+    if (!liberal && regExpProto.test(this.strict ? this.reservedWordsStrict : this.reservedWords, this.value) &&
         (this.options.ecmaVersion >= 6 ||
-         this.input.slice(this.start, this.end).indexOf("\\") == -1))
+         stringProto.indexOf(stringProto.slice(this.input, this.start, this.end), "\\") == -1))
       this.raise(this.start, "The keyword '" + this.value + "' is reserved")
     node.name = this.value
   } else if (liberal && this.type.keyword) {
@@ -679,6 +680,10 @@ pp.parseYield = function() {
   }
   return this.finishNode(node, "YieldExpression")
 }
+// -------------------------------------------------------------
+// WARNING: this file is used by both the client and the server.
+// Do not use any browser or node-specific API!
+// -------------------------------------------------------------
 
 // Parses array and generator comprehensions.
 
@@ -693,7 +698,7 @@ pp.parseComprehension = function(node, isGenerator) {
     this.expectContextual("of")
     block.right = this.parseExpression()
     this.expect(tt.parenR)
-    node.blocks.push(this.finishNode(block, "ComprehensionBlock"))
+    arrayProto.push(node.blocks, this.finishNode(block, "ComprehensionBlock"))
   }
   node.filter = this.eat(tt._if) ? this.parseParenExpression() : null
   node.body = this.parseExpression()

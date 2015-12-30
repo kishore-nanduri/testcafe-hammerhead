@@ -2,8 +2,10 @@
 // WARNING: this file is used by both the client and the server.
 // Do not use any browser or node-specific API!
 // -------------------------------------------------------------
+/* eslint hammerhead/proto-methods: 2 */
 
 import trim from './string-trim';
+import { stringProto, regExpProto, arrayProto } from '../protos';
 
 //Const
 const PROTOCOL_RE        = /(^(\w+?\:))/;
@@ -18,7 +20,7 @@ export const IFRAME                              = 'iframe';
 export const SCRIPT                              = 'script';
 
 function validateDestUrl (url) {
-    if (!/^https?:/.test(url)) {
+    if (!regExpProto.test(/^https?:/, url)) {
         throw {
             code:    URL_UTIL_PROTOCOL_IS_NOT_SUPPORTED,
             destUrl: url
@@ -27,13 +29,13 @@ function validateDestUrl (url) {
 }
 
 export function isSubDomain (domain, subDomain) {
-    domain    = domain.replace(/^www./i, '');
-    subDomain = subDomain.replace(/^www./i, '');
+    domain    = stringProto.replace(domain, /^www./i, '');
+    subDomain = stringProto.replace(subDomain, /^www./i, '');
 
     if (domain === subDomain)
         return true;
 
-    var index = subDomain.lastIndexOf(domain);
+    var index = stringProto.lastIndexOf(subDomain, domain);
 
     return subDomain[index - 1] === '.' && subDomain.length === index + domain.length;
 }
@@ -72,7 +74,7 @@ export function sameOriginCheck (location, checkedUrl) {
 export function convertHostToLowerCase (url) {
     var parsedUrl = parseUrl(url);
 
-    return (parsedUrl.protocol + '//' + parsedUrl.host).toLowerCase() + parsedUrl.partAfterHost;
+    return stringProto.toLowerCase(parsedUrl.protocol + '//' + parsedUrl.host) + parsedUrl.partAfterHost;
 }
 
 export function getProxyUrl (url, proxyHostname, proxyPort, sessionId, resourceType, charset) {
@@ -81,12 +83,12 @@ export function getProxyUrl (url, proxyHostname, proxyPort, sessionId, resourceT
     var params = [sessionId];
 
     if (resourceType)
-        params.push(resourceType);
+        arrayProto.push(params, resourceType);
 
     if (charset)
-        params.push(charset);
+        arrayProto.push(params, charset);
 
-    params = params.join(REQUEST_DESCRIPTOR_VALUES_SEPARATOR);
+    params = arrayProto.join(params, REQUEST_DESCRIPTOR_VALUES_SEPARATOR);
 
     return 'http://' + proxyHostname + ':' + proxyPort + '/' + params + '/' + convertHostToLowerCase(url);
 }
@@ -107,12 +109,12 @@ export function parseProxyUrl (proxyUrl) {
     if (!parsedUrl.partAfterHost)
         return null;
 
-    var match = parsedUrl.partAfterHost.match(/^\/(\S+?)\/(https?:\/\/\S+)/);
+    var match = stringProto.match(parsedUrl.partAfterHost, /^\/(\S+?)\/(https?:\/\/\S+)/);
 
     if (!match)
         return null;
 
-    var params = match[1].split(REQUEST_DESCRIPTOR_VALUES_SEPARATOR);
+    var params = stringProto.split(match[1], REQUEST_DESCRIPTOR_VALUES_SEPARATOR);
 
     // NOTE: We should have, at least, the job uid and the owner token.
     if (!params.length)
@@ -135,7 +137,7 @@ export function parseProxyUrl (proxyUrl) {
 }
 
 export function getPathname (path) {
-    return path.replace(QUERY_AND_HASH_RE, '');
+    return stringProto.replace(path, QUERY_AND_HASH_RE, '');
 }
 
 export function parseUrl (url) {
@@ -150,15 +152,15 @@ export function parseUrl (url) {
 
     // Protocol
     var hasImplicitProtocol = false;
-    var remainder           = url
-        .replace(PROTOCOL_RE, (str, protocol) => {
-            parsed.protocol = protocol;
-            return '';
-        })
-        .replace(LEADING_SLASHES_RE, () => {
-            hasImplicitProtocol = true;
-            return '';
-        });
+    var remainder           = stringProto.replace(url, PROTOCOL_RE, (str, protocol) => {
+        parsed.protocol = protocol;
+        return '';
+    });
+
+    remainder = stringProto.replace(remainder, LEADING_SLASHES_RE, () => {
+        hasImplicitProtocol = true;
+        return '';
+    });
 
     // NOTE: the URL is relative.
     if (!parsed.protocol && !hasImplicitProtocol) {
@@ -167,14 +169,13 @@ export function parseUrl (url) {
     }
 
     // Host
-    parsed.partAfterHost = remainder
-        .replace(HOST_RE, (str, host, restPartSeparator) => {
-            parsed.host = host;
-            return restPartSeparator;
-        });
+    parsed.partAfterHost = stringProto.replace(remainder, HOST_RE, (str, host, restPartSeparator) => {
+        parsed.host = host;
+        return restPartSeparator;
+    });
 
     if (parsed.host) {
-        parsed.hostname = parsed.host.replace(PORT_RE, (str, port) => {
+        parsed.hostname = stringProto.replace(parsed.host, PORT_RE, (str, port) => {
             parsed.port = port;
             return '';
         });
@@ -184,7 +185,7 @@ export function parseUrl (url) {
 }
 
 export function isSupportedProtocol (url) {
-    return !/^\s*(chrome-extension:|blob:|javascript:|about:|mailto:|tel:|data:|skype:|skypec2c:|file:|#)/i.test(url);
+    return !regExpProto.test(/^\s*(chrome-extension:|blob:|javascript:|about:|mailto:|tel:|data:|skype:|skypec2c:|file:|#)/i, url);
 }
 
 export function resolveUrlAsDest (url, getProxyUrlMeth) {
@@ -231,13 +232,13 @@ export function formatUrl (parsedUrl) {
 export function prepareUrl (url) {
     // TODO: fix it
     /* eslint-disable no-undef */
-    if (url === null && /iPad|iPhone/i.test(window.navigator.userAgent))
+    if (url === null && regExpProto.test(/iPad|iPhone/i, window.navigator.userAgent))
         return '';
     /* eslint-enable no-undef */
 
-    url = (url + '').replace(/\n|\t/g, '');
+    url = stringProto.replace(url + '', /\n|\t/g, '');
 
     // NOTE: Remove unnecessary slashes from the beginning of the url.
     // For example, the "//////google.com" url is equal to "//google.com".
-    return url.replace(/^\/+(\/\/.*$)/, '$1');
+    return stringProto.replace(url, /^\/+(\/\/.*$)/, '$1');
 }

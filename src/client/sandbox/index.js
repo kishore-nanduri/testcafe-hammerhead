@@ -17,6 +17,7 @@ import UploadSandbox from './upload';
 import XhrSandbox from './xhr';
 import { isIE, isWebKit } from '../utils/browser';
 import { addSandboxToStorage, getSandboxFromStorage } from './storage';
+import { functionProto } from '../../protos';
 
 export default class Sandbox extends SandboxBase {
     constructor () {
@@ -59,13 +60,13 @@ export default class Sandbox extends SandboxBase {
         );
 
         var needToUpdateNativeElementMeths = tryToExecuteCode(() => {
-            var nativeElement = this.nativeMethods.createElement.call(document, 'div');
+            var nativeElement = functionProto.call(this.nativeMethods.createElement, document, 'div');
 
             return nativeElement.getAttribute.toString() === this.nativeMethods.getAttribute.toString();
         });
 
         var needToUpdateNativeWindowMeths = tryToExecuteCode(() => {
-            this.nativeMethods.setTimeout.call(window, () => void 0, 0);
+            functionProto.call(this.nativeMethods.setTimeout, window, () => void 0, 0);
 
             return window.XMLHttpRequest.toString() === this.nativeMethods.XMLHttpRequest.toString();
         });

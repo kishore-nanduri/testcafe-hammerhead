@@ -17,6 +17,7 @@ import { getProxyUrl } from './utils/url';
 import isJQueryObj from './utils/is-jquery-object';
 import extend from './utils/extend';
 import trim from '../utils/string-trim';
+import { functionProto, objectStatic } from '../protos';
 
 class Hammerhead {
     constructor () {
@@ -42,7 +43,7 @@ class Hammerhead {
 
         // Methods
         this.getOriginElementAttributes = CodeInstrumentation.getAttributesProperty;
-        this.doUpload                   = this.sandbox.upload.doUpload.bind(this.sandbox.upload);
+        this.doUpload                   = functionProto.bind(this.sandbox.upload.doUpload, this.sandbox.upload);
 
         // NOTE: We should provide a function to retrieve modules, because hammerhead will be bundled into a single
         // file and we will not have access to the internal modules by default.
@@ -148,7 +149,7 @@ class Hammerhead {
 
 var hammerhead = new Hammerhead();
 
-Object.defineProperty(window, '%hammerhead%', {
+objectStatic.defineProperty(window, '%hammerhead%', {
     enumerable:   false,
     configurable: false,
     writable:     false,

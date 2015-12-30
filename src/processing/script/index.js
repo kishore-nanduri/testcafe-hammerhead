@@ -10,6 +10,7 @@ import { parse } from './tools/acorn';
 import { generate, Syntax } from './tools/esotope';
 import reEscape from '../../utils/regexp-escape';
 import getBOM from '../../utils/get-bom';
+import { arrayProto, stringProto, regExpProto } from '../../protos';
 
 
 // Const
@@ -18,29 +19,29 @@ const OBJECT_RE             = /^\s*\{.*\}\s*$/;
 const TRAILING_SEMICOLON_RE = /;\s*$/;
 const OBJECT_WRAPPER_RE     = /^\s*\((.*)\);\s*$/;
 
-const PROCESSED_SCRIPT_RE = new RegExp([
+const PROCESSED_SCRIPT_RE = new RegExp(arrayProto.join([
     reEscape(INSTRUCTION.getLocation),
     reEscape(INSTRUCTION.setLocation),
     reEscape(INSTRUCTION.getProperty),
     reEscape(INSTRUCTION.setProperty),
     reEscape(INSTRUCTION.callMethod),
     reEscape(INSTRUCTION.processScript)
-].join('|'));
+], '|'));
 
 
 // Code pre/post-processing
 function removeHtmlComments (code) {
     // NOTE: The JS parser removes the line that follows'<!--'. (T226589)
     do
-        code = code.replace(HTML_COMMENT_RE, '\n');
-    while (HTML_COMMENT_RE.test(code));
+        code = stringProto.replace(code, HTML_COMMENT_RE, '\n');
+    while (regExpProto.test(HTML_COMMENT_RE, code));
 
     return code;
 }
 
 function preprocess (code) {
     var bom          = getBOM(code);
-    var preprocessed = bom ? code.substring(bom.length) : code;
+    var preprocessed = bom ? stringProto.substring(code, bom.length) : code;
 
     preprocessed = removeHeader(preprocessed);
 
@@ -57,7 +58,7 @@ function postprocess (processed, withHeader, bom) {
 
 // Parse/generate code
 function removeTrailingSemicolonIfNecessary (processed, src) {
-    return TRAILING_SEMICOLON_RE.test(src) ? processed : processed.replace(TRAILING_SEMICOLON_RE, '');
+    return regExpProto.test(TRAILING_SEMICOLON_RE, src) ? processed : stringProto.replace(processed, TRAILING_SEMICOLON_RE, '');
 }
 
 function getAst (src, isObject) {
@@ -83,7 +84,7 @@ function getCode (ast, src, isObject, beautify) {
     });
 
     if (isObject)
-        code = code.replace(OBJECT_WRAPPER_RE, '$1');
+        code = stringProto.replace(code, OBJECT_WRAPPER_RE, '$1');
 
     return removeTrailingSemicolonIfNecessary(code, src);
 }
@@ -93,7 +94,7 @@ function getCode (ast, src, isObject, beautify) {
 function analyze (code) {
     code = removeHtmlComments(code);
 
-    var isObject = OBJECT_RE.test(code);
+    var isObject = regExpProto.test(OBJECT_RE, code);
     var ast      = getAst(code, isObject);
 
     // NOTE: `{ var a = 'foo'; }` edge case
@@ -113,7 +114,7 @@ function isArrayDataScript (ast) {
 
 
 export function isScriptProcessed (code) {
-    return PROCESSED_SCRIPT_RE.test(code);
+    return regExpProto.test(PROCESSED_SCRIPT_RE, code);
 }
 
 export function processScript (src, withHeader, beautify) {

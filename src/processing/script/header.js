@@ -6,11 +6,12 @@
 import reEscape from '../../utils/regexp-escape';
 import INTERNAL_PROPS from '../../processing/dom/internal-properties';
 import INSTRUCTION from './instruction';
+import { arrayProto, stringProto } from '../../protos';
 
 const PREFIX  = '/*hammerhead|script-processing-header|start*/';
 const POSTFIX = '/*hammerhead|script-processing-header|end*/';
 
-export const HEADER = [
+export const HEADER = arrayProto.join([
     PREFIX,
     'var __w$= typeof window!=="undefined"&&window;',
     `__w$ && __w$["${INTERNAL_PROPS.overrideDomMethodName}"] && __w$["${INTERNAL_PROPS.overrideDomMethodName}"]();`,
@@ -23,12 +24,12 @@ export const HEADER = [
     `${ INSTRUCTION.processScript }=__w$?__w$.${ INSTRUCTION.processScript }:function(s){return s};`,
     POSTFIX,
     '\n'
-].join('');
+], '');
 
 // NOTE: IE removes trailing newlines in script.textContent,
 // so a trailing newline in RegExp is optional
 const HEADER_RE = new RegExp(`${reEscape(PREFIX)}[\\S\\s]+?${reEscape(POSTFIX)}\n?`, 'i');
 
 export function remove (code) {
-    return code.replace(HEADER_RE, '');
+    return stringProto.replace(code, HEADER_RE, '');
 }

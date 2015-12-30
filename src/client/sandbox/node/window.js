@@ -9,6 +9,7 @@ import { isSubDomain, parseUrl, getProxyUrl } from '../../utils/url';
 import { isFirefox } from '../../utils/browser';
 import { isCrossDomainWindows, isImgElement, isBlob } from '../../utils/dom';
 import INTERNAL_ATTRS from '../../../processing/dom/internal-attributes';
+import { arrayProto, stringProto, functionProto } from '../../../protos';
 
 export default class WindowSandbox extends SandboxBase {
     constructor (nodeSandbox, messageSandbox) {
@@ -66,27 +67,27 @@ export default class WindowSandbox extends SandboxBase {
             var image = arguments[0];
 
             if (isImgElement(image)) {
-                var changedArgs = Array.prototype.slice.call(arguments, 0);
+                var changedArgs = arrayProto.slice(arguments);
                 var src         = image.src;
 
                 if (destLocation.sameOriginCheck(location.toString(), src)) {
-                    changedArgs[0]     = nativeMethods.createElement.call(window.document, 'img');
+                    changedArgs[0]     = functionProto.call(nativeMethods.createElement, window.document, 'img');
                     changedArgs[0].src = getProxyUrl(src);
                 }
             }
 
-            return nativeMethods.canvasContextDrawImage.apply(this, changedArgs || arguments);
+            return functionProto.apply(nativeMethods.canvasContextDrawImage, this, changedArgs || arguments);
         };
 
         // NOTE: Override uncaught error handling.
         window.onerror = (msg, url, line, col, errObj) => {
             // NOTE: Firefox raises the NS_ERROR_NOT_INITIALIZED exception after the window is removed from the dom.
-            if (msg.indexOf('NS_ERROR_NOT_INITIALIZED') !== -1)
+            if (stringProto.indexOf(msg, 'NS_ERROR_NOT_INITIALIZED') !== -1)
                 return true;
 
             var originalOnErrorHandler = CodeInstrumentation.getOriginalErrorHandler(window);
             var caught                 = originalOnErrorHandler &&
-                                         originalOnErrorHandler.call(window, msg, url, line, col, errObj) === true;
+                                         functionProto.call(originalOnErrorHandler, window, msg, url, line, col, errObj) === true;
 
             if (caught)
                 return true;
@@ -99,15 +100,15 @@ export default class WindowSandbox extends SandboxBase {
         window.open = function () {
             var newArgs = [];
 
-            newArgs.push(getProxyUrl(arguments[0]));
-            newArgs.push('_self');
+            arrayProto.push(newArgs, getProxyUrl(arguments[0]));
+            arrayProto.push(newArgs, '_self');
 
             if (arguments.length > 2)
-                newArgs.push(arguments[2]);
+                arrayProto.push(newArgs, arguments[2]);
             if (arguments.length > 3)
-                newArgs.push(arguments[3]);
+                arrayProto.push(newArgs, arguments[3]);
 
-            return nativeMethods.windowOpen.apply(window, newArgs);
+            return functionProto.apply(nativeMethods.windowOpen, window, newArgs);
         };
 
         window.Worker = scriptURL => {
@@ -121,7 +122,7 @@ export default class WindowSandbox extends SandboxBase {
                 if (arguments.length === 0)
                     return new nativeMethods.Blob();
 
-                var type = opts && opts.type && opts.type.toString().toLowerCase();
+                var type = opts && opts.type && stringProto.toLowerCase(opts.type.toString());
 
                 // NOTE: If we cannot identify the content type of data, we're trying to process it as a script.
                 // Unfortunately, we do not have the ability to exactly identify a script. That's why we make such
@@ -129,7 +130,7 @@ export default class WindowSandbox extends SandboxBase {
                 // creating a new Blob instance is asynchronous. (GH-231)
                 if (!type || type === 'text/javascript' || type === 'application/javascript' ||
                     type === 'application/x-javascript')
-                    parts = [processScript(parts.join(''), true, false)];
+                    parts = [processScript(arrayProto.join(parts, ''), true, false)];
 
                 // NOTE: IE11 throws an error when the second parameter of the Blob function is undefined (GH-44)
                 // If the overridden function is called with one parameter, we need to call the original function
@@ -147,7 +148,7 @@ export default class WindowSandbox extends SandboxBase {
 
                     for (var i = 0; i < mutations.length; i++) {
                         if (!ShadowUI.isShadowUIMutation(mutations[i]))
-                            result.push(mutations[i]);
+                            arrayProto.push(result, mutations[i]);
                     }
 
                     if (result.length)
@@ -162,7 +163,7 @@ export default class WindowSandbox extends SandboxBase {
             window.navigator.serviceWorker.register = url => {
                 url = getProxyUrl(url);
 
-                return nativeMethods.registerServiceWorker.call(window.navigator.serviceWorker, url);
+                return functionProto.call(nativeMethods.registerServiceWorker, window.navigator.serviceWorker, url);
             };
         }
 
@@ -186,24 +187,24 @@ export default class WindowSandbox extends SandboxBase {
                 var args = [data, title];
 
                 if (arguments.length > 2)
-                    args.push(url ? getProxyUrl(url) : url);
+                    arrayProto.push(args, url ? getProxyUrl(url) : url);
 
-                return nativeMethods.historyPushState.apply(history, args);
+                return functionProto.apply(nativeMethods.historyPushState, history, args);
             };
 
             window.history.replaceState = function (data, title, url) {
                 var args = [data, title];
 
                 if (arguments.length > 2)
-                    args.push(url ? getProxyUrl(url) : url);
+                    arrayProto.push(args, url ? getProxyUrl(url) : url);
 
-                return nativeMethods.historyReplaceState.apply(history, args);
+                return functionProto.apply(nativeMethods.historyReplaceState, history, args);
             };
         }
 
         if (window.navigator.registerProtocolHandler) {
             window.navigator.registerProtocolHandler = function () {
-                var args         = Array.prototype.slice.call(arguments);
+                var args         = arrayProto.slice(arguments);
                 var urlIndex     = 1;
                 var destHostname = destLocation.getParsed().hostname;
                 var isDestUrl    = isFirefox ? isSubDomain(destHostname, parseUrl(args[urlIndex]).hostname) :
@@ -212,7 +213,7 @@ export default class WindowSandbox extends SandboxBase {
                 if (isDestUrl)
                     args[urlIndex] = getProxyUrl(args[urlIndex]);
 
-                return nativeMethods.registerProtocolHandler.apply(navigator, args);
+                return functionProto.apply(nativeMethods.registerProtocolHandler, navigator, args);
             };
         }
 
@@ -227,9 +228,9 @@ export default class WindowSandbox extends SandboxBase {
                 // This happens because the file wrapper is an instance of Blob
                 // and a browser thinks that Blob does not contain the "name" property.
                 if (arguments.length === 2 && isBlob(value) && 'name' in value)
-                    nativeMethods.formDataAppend.call(this, name, value, value.name);
+                    functionProto.call(nativeMethods.formDataAppend, this, name, value, value.name);
                 else
-                    nativeMethods.formDataAppend.apply(this, arguments);
+                    functionProto.apply(nativeMethods.formDataAppend, this, arguments);
             };
         }
     }

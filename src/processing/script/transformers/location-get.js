@@ -6,6 +6,7 @@
 import { createLocationGetWrapper } from '../node-builder';
 import INSTRUCTION from '../instruction';
 import { Syntax } from '../tools/esotope';
+import { arrayProto } from '../../../protos';
 
 // Transform:
 // location -->
@@ -42,7 +43,7 @@ export default {
 
         // Skip: function (location) { ... } || function func(location) { ... }
         if ((parent.type === Syntax.FunctionExpression || parent.type === Syntax.FunctionDeclaration) &&
-            parent.params.indexOf(node) !== -1)
+            arrayProto.indexOf(parent.params, node) !== -1)
             return false;
 
         // Skip already transformed: __get$Loc(location)

@@ -5,6 +5,7 @@ import nativeMethods from '../sandbox/native-methods';
 import * as urlUtils from './url';
 import { sameOriginCheck } from './destination-location';
 import { isFirefox, isWebKit, isIE, isOpera } from './browser';
+import { stringProto, regExpProto, arrayProto, functionProto } from '../../protos';
 
 var scrollbarSize = null;
 
@@ -27,11 +28,12 @@ function isHidden (el) {
 }
 
 function isAlwaysNotEditableElement (el) {
-    var tagName                          = el.tagName.toLowerCase();
+    var tagName                          = stringProto.toLowerCase(el.tagName);
     var notContentEditableElementsRegExp = /select|option|applet|area|audio|canvas|datalist|keygen|map|meter|object|progress|source|track|video|img/;
     var inputElementsRegExp              = /input|textarea|button/;
 
-    return tagName && (notContentEditableElementsRegExp.test(tagName) || inputElementsRegExp.test(tagName));
+    return tagName && (regExpProto.test(notContentEditableElementsRegExp, tagName) ||
+                       regExpProto.test(inputElementsRegExp, tagName));
 }
 
 function closestFallback (el, selector) {
@@ -47,11 +49,11 @@ function closestFallback (el, selector) {
 
 function addClassFallback (el, className) {
     if (className) {
-        var classNames = className.split(/\s+/);
+        var classNames = stringProto.split(className, /\s+/);
         var setClass   = ' ' + el.className + ' ';
 
         for (var i = 0; i < classNames.length; i++) {
-            if (setClass.indexOf(' ' + classNames[i] + ' ') === -1)
+            if (stringProto.indexOf(setClass, ' ' + classNames[i] + ' ') === -1)
                 setClass += classNames[i] + ' ';
         }
 
@@ -61,23 +63,23 @@ function addClassFallback (el, className) {
 
 function removeClassFallback (el, className) {
     if (el.className && className) {
-        var classNames = (className || '').split(/\s+/);
+        var classNames = stringProto.split(className || '', /\s+/);
 
-        className = (' ' + el.className + ' ').replace(/[\n\t\r]/g, ' ');
+        className = stringProto.replace(' ' + el.className + ' ', /[\n\t\r]/g, ' ');
 
         for (var i = 0; i < classNames.length; i++)
-            className = className.replace(' ' + classNames[i] + ' ', ' ');
+            className = stringProto.replace(className, ' ' + classNames[i] + ' ', ' ');
 
         el.className = trim(className);
     }
 }
 
 function hasClassFallback (el, className) {
-    var preparedElementClassName = (' ' + el.className + ' ').replace(/[\n\t\r]/g, ' ');
+    var preparedElementClassName = stringProto.replace(' ' + el.className + ' ', /[\n\t\r]/g, ' ');
 
     className = ' ' + className + ' ';
 
-    return preparedElementClassName.indexOf(className) !== -1;
+    return stringProto.indexOf(preparedElementClassName, className) !== -1;
 }
 
 export function getActiveElement (currentDocument) {
@@ -85,7 +87,7 @@ export function getActiveElement (currentDocument) {
     var activeElement = doc.activeElement &&
                         doc.activeElement.tagName ? doc.activeElement : doc.body;
 
-    if (activeElement.tagName.toLowerCase() === 'iframe') {
+    if (stringProto.toLowerCase(activeElement.tagName) === 'iframe') {
         try {
             return getActiveElement(activeElement.contentDocument);
         }
@@ -101,7 +103,7 @@ export function getActiveElement (currentDocument) {
 export function getChildVisibleIndex (select, child) {
     var childrenArray = getSelectVisibleChildren(select);
 
-    return childrenArray.indexOf(child);
+    return arrayProto.indexOf(childrenArray, child);
 }
 
 export function getIframeByElement (el) {
@@ -138,8 +140,8 @@ export function getIframeLocation (iframe) {
         documentLocation = null;
     }
 
-    var srcLocation = nativeMethods.getAttribute.call(iframe, 'src' + INTERNAL_ATTRS.storedAttrPostfix) ||
-                      nativeMethods.getAttribute.call(iframe, 'src') || iframe.src;
+    var srcLocation = functionProto.call(nativeMethods.getAttribute, iframe, 'src' + INTERNAL_ATTRS.storedAttrPostfix) ||
+                      functionProto.call(nativeMethods.getAttribute, iframe, 'src') || iframe.src;
 
     var parsedProxyDocumentLocation = documentLocation && urlUtils.isSupportedProtocol(documentLocation) &&
                                       urlUtils.parseProxyUrl(documentLocation);
@@ -163,10 +165,10 @@ export function getFrameElement (win) {
 
 export function getMapContainer (el) {
     var closestMap        = closest(el, 'map');
-    var closestMapName    = nativeMethods.getAttribute.call(closestMap, 'name');
+    var closestMapName    = functionProto.call(nativeMethods.getAttribute, closestMap, 'name');
     var containerSelector = '[usemap="#' + closestMapName + '"]';
 
-    return nativeMethods.querySelector.call(findDocument(el), containerSelector);
+    return functionProto.call(nativeMethods.querySelector, findDocument(el), containerSelector);
 }
 
 export function getParentWindowWithSrc (window) {
@@ -194,7 +196,7 @@ export function getParentWindowWithSrc (window) {
 
 export function getScrollbarSize () {
     if (!scrollbarSize) {
-        var scrollDiv = nativeMethods.createElement.call(document, 'div');
+        var scrollDiv = functionProto.call(nativeMethods.createElement, document, 'div');
 
         scrollDiv.style.height   = '100px';
         scrollDiv.style.overflow = 'scroll';
@@ -216,7 +218,7 @@ export function getSelectParent (child) {
     var parent = child.parentNode;
 
     while (parent) {
-        if (parent.tagName && parent.tagName.toLowerCase() === 'select')
+        if (parent.tagName && stringProto.toLowerCase(parent.tagName) === 'select')
             return parent;
 
         parent = parent.parentNode;
@@ -225,13 +227,13 @@ export function getSelectParent (child) {
 }
 
 export function getSelectVisibleChildren (select) {
-    var children = nativeMethods.elementQuerySelectorAll.call(select, 'optgroup, option');
+    var children = functionProto.call(nativeMethods.elementQuerySelectorAll, select, 'optgroup, option');
 
-    children = Array.prototype.slice.call(children);
+    children = arrayProto.slice(children);
 
     // NOTE: Firefox does not display groups without a label and with an empty label.
     if (isFirefox)
-        children = children.filter(item => item.tagName.toLowerCase() !== 'optgroup' || !!item.label);
+        children = arrayProto.filter(children, item => stringProto.toLowerCase(item.tagName) !== 'optgroup' || !!item.label);
 
     return children;
 }
@@ -246,7 +248,7 @@ export function getTopSameDomainWindow (window) {
 }
 
 export function find (parent, selector, handler) {
-    var elms = nativeMethods.elementQuerySelectorAll.call(parent, selector);
+    var elms = functionProto.call(nativeMethods.elementQuerySelectorAll, parent, selector);
 
     if (handler) {
         for (var i = 0; i < elms.length; i++)
@@ -317,9 +319,9 @@ export function isCrossDomainWindows (window1, window2) {
 
 export function isDomElement (el) {
     // NOTE: T184805
-    if (el && typeof el.toString === 'function' && el.toString.toString().indexOf('[native code]') !== -1 &&
-        el.constructor &&
-        (el.constructor.toString().indexOf(' Element') !== -1 || el.constructor.toString().indexOf(' Node') !== -1))
+    if (el && typeof el.toString === 'function' && stringProto.indexOf(el.toString.toString(), '[native code]') !== -1 &&
+        el.constructor && (stringProto.indexOf(el.constructor.toString(), ' Element') !== -1 ||
+                           stringProto.indexOf(el.constructor.toString(), ' Node') !== -1))
         return false;
 
     // NOTE: B252941
@@ -347,16 +349,16 @@ export function isElementInIframe (el, currentDocument) {
 }
 
 export function isFileInput (el) {
-    return isInputElement(el) && el.type.toLowerCase() === 'file';
+    return isInputElement(el) && stringProto.toLowerCase(el.type) === 'file';
 }
 
 export function isHammerheadAttr (attr) {
     return attr === INTERNAL_ATTRS.focusPseudoClass || attr === INTERNAL_ATTRS.hoverPseudoClass ||
-           attr.indexOf(INTERNAL_ATTRS.storedAttrPostfix) !== -1;
+           stringProto.indexOf(attr, INTERNAL_ATTRS.storedAttrPostfix) !== -1;
 }
 
 export function isIframe (el) {
-    return isDomElement(el) && el.tagName.toLowerCase() === 'iframe';
+    return isDomElement(el) && stringProto.toLowerCase(el.tagName) === 'iframe';
 }
 
 export function isIframeWithoutSrc (iframe) {
@@ -394,15 +396,15 @@ export function isIframeWithoutSrc (iframe) {
 }
 
 export function isImgElement (el) {
-    return isDomElement(el) && el.tagName.toLowerCase() === 'img';
+    return isDomElement(el) && stringProto.toLowerCase(el.tagName) === 'img';
 }
 
 export function isInputElement (el) {
-    return isDomElement(el) && el.tagName.toLowerCase() === 'input';
+    return isDomElement(el) && stringProto.toLowerCase(el.tagName) === 'input';
 }
 
 export function isBodyElement (el) {
-    return isDomElement(el) && el.tagName.toLowerCase() === 'body';
+    return isDomElement(el) && stringProto.toLowerCase(el.tagName) === 'body';
 }
 
 export function isBodyElementWithChildren (el) {
@@ -415,11 +417,11 @@ export function isInputWithoutSelectionPropertiesInFirefox (el) {
 }
 
 export function isMapElement (el) {
-    return /^map$|^area$/i.test(el.tagName);
+    return regExpProto.test(/^map$|^area$/i, el.tagName);
 }
 
 export function isRenderedNode (node) {
-    return !(node.nodeType === 7 || node.nodeType === 8 || /^(script|style)$/i.test(node.nodeName));
+    return !(node.nodeType === 7 || node.nodeType === 8 || regExpProto.test(/^(script|style)$/i, node.nodeName));
 }
 
 export function isElementFocusable (el) {
@@ -427,7 +429,7 @@ export function isElementFocusable (el) {
         return false;
 
     var isAnchorWithoutHref = el.tagName &&
-                              el.tagName.toLowerCase() === 'a' &&
+                              stringProto.toLowerCase(el.tagName) === 'a' &&
                               el.getAttribute('href') === '' && !el.getAttribute('tabIndex');
 
     var isFocusable = !isAnchorWithoutHref &&
@@ -439,7 +441,7 @@ export function isElementFocusable (el) {
         return false;
 
     if (isWebKit || isOpera)
-        return !isHidden(el) || el.tagName && el.tagName.toLowerCase() === 'option';
+        return !isHidden(el) || el.tagName && stringProto.toLowerCase(el.tagName) === 'option';
 
     return !isHidden(el);
 }
@@ -450,7 +452,7 @@ export function isShadowUIElement (element) {
             return false;
 
         // NOTE: Check the className type to avoid issues with a SVG element’s className property.
-        if (typeof element.className === 'string' && element.className.indexOf(SHADOW_UI_CLASSNAME.postfix) > -1)
+        if (typeof element.className === 'string' && stringProto.indexOf(element.className, SHADOW_UI_CLASSNAME.postfix) > -1)
             return true;
 
         element = element.parentNode;
@@ -505,13 +507,13 @@ export function isSVGElementOrChild (el) {
 
 export function isTextEditableInput (el) {
     var editableInputTypesRegEx = /^(datetime|email|number|password|search|tel|text|url)$/;
-    var tagName                 = el.tagName ? el.tagName.toLowerCase() : '';
+    var tagName                 = el.tagName ? stringProto.toLowerCase(el.tagName) : '';
 
-    return tagName === 'input' && editableInputTypesRegEx.test(el.type);
+    return tagName === 'input' && regExpProto.test(editableInputTypesRegEx, el.type);
 }
 
 export function isTextEditableElement (el) {
-    var tagName = el.tagName ? el.tagName.toLowerCase() : '';
+    var tagName = el.tagName ? stringProto.toLowerCase(el.tagName) : '';
 
     return isTextEditableInput(el) || tagName === 'textarea';
 }
@@ -527,7 +529,7 @@ export function isTextNode (node) {
 }
 
 export function isAnchor (el) {
-    return isDomElement(el) && el.tagName.toLowerCase() === 'a';
+    return isDomElement(el) && stringProto.toLowerCase(el.tagName) === 'a';
 }
 
 export function matches (el, selector) {
@@ -539,7 +541,7 @@ export function matches (el, selector) {
     if (!matchesSelector)
         return false;
 
-    return matchesSelector.call(el, selector);
+    return functionProto.call(matchesSelector, el, selector);
 }
 
 export function closest (el, selector) {
@@ -555,9 +557,9 @@ export function addClass (el, className) {
 
     // NOTE: IE10+
     if (el && el.classList) {
-        var classNames = className.split(/\s+/);
+        var classNames = stringProto.split(className, /\s+/);
 
-        classNames.forEach(item => el.classList.add(item));
+        arrayProto.forEach(classNames, item => el.classList.add(item));
     }
     else
         addClassFallback(el, className);
@@ -569,9 +571,9 @@ export function removeClass (el, className) {
 
     // NOTE: IE10+
     if (el.classList) {
-        var classNames = className.split(/\s+/);
+        var classNames = stringProto.split(className, /\s+/);
 
-        classNames.forEach(item => el.classList.remove(item));
+        arrayProto.forEach(classNames, item => el.classList.remove(item));
     }
     else
         removeClassFallback(el, className);
@@ -589,7 +591,7 @@ export function hasClass (el, className) {
 }
 
 export function parseDocumentCharset () {
-    var metaCharset = nativeMethods.querySelector.call(document, '.' + SHADOW_UI_CLASSNAME.charset);
+    var metaCharset = functionProto.call(nativeMethods.querySelector, document, '.' + SHADOW_UI_CLASSNAME.charset);
 
     return metaCharset && metaCharset.getAttribute('charset');
 }
@@ -600,7 +602,7 @@ export function getParents (el, selector) {
 
     while (parent) {
         if (parent.nodeType === 1 && !selector || selector && matches(parent, selector))
-            parents.push(parent);
+            arrayProto.push(parents, parent);
 
         parent = parent.parentNode;
     }

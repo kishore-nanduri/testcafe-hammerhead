@@ -1,4 +1,5 @@
-import isJQueryObj from './utils/is-jquery-object';
+import isJQueryObj from '../utils/is-jquery-object';
+import { stringProto, regExpProto, functionProto, arrayProto } from '../../protos';
 
 // NOTE: json2.js uses fallbacks to the existing JSON implementations. So we can't rely on it in our client code.
 // This is an isolated implementation of JSON that does not rely on any external stuff (prototypes, existing JSON
@@ -31,11 +32,11 @@ function quote (string) {
     // sequences.
 
     escapable.lastIndex = 0;
-    return escapable.test(string) ? '"' + string.replace(escapable, function (a) {
+    return regExpProto.test(escapable, string) ? '"' + stringProto.replace(string, escapable, function (a) {
         var c = meta[a];
         return typeof c === 'string'
             ? c
-            : '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+            : '\\u' + stringProto.slice('0000' + stringProto.charCodeAt(a, 0).toString(16), -4);
     }) + '"' : '"' + string + '"';
 }
 
@@ -56,7 +57,7 @@ function str (key, holder) {
 
     if (value && typeof value === 'object') {
         //NOTE: determine exact object type instead of relying on prototype.toJSON like in original json2.js
-        var objToStrValue = Object.prototype.toString.apply(value);
+        var objToStrValue = functionProto.apply(Object.prototype.toString, value);
         if (objToStrValue === '[object String]' ||
             objToStrValue === '[object Number]' ||
             objToStrValue === '[object Boolean]') {
@@ -113,7 +114,7 @@ function str (key, holder) {
 
             // Is the value an array?
 
-            if (Object.prototype.toString.apply(value) === '[object Array]') {
+            if (functionProto.apply(Object.prototype.toString, value) === '[object Array]') {
 
                 // The value is an array. Stringify every element. Use null as a placeholder
                 // for non-JSON values.
@@ -129,18 +130,18 @@ function str (key, holder) {
                 v   = partial.length === 0
                     ? '[]'
                     : gap
-                          ? '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind + ']'
-                          : '[' + partial.join(',') + ']';
+                          ? '[\n' + gap + arrayProto.join(partial, ',\n' + gap) + '\n' + mind + ']'
+                          : '[' + arrayProto.join(partial, ',') + ']';
                 gap = mind;
                 return v;
             }
 
             // Iterate through all of the keys in the object.
             for (k in value) {
-                if (Object.prototype.hasOwnProperty.call(value, k)) {
+                if (functionProto.call(Object.prototype.hasOwnProperty, value, k)) {
                     v = str(k, value);
                     if (v) {
-                        partial.push(quote(k) + (gap ? ': ' : ':') + v);
+                        arrayProto.push(partial, quote(k) + (gap ? ': ' : ':') + v);
                     }
                 }
             }
@@ -151,8 +152,8 @@ function str (key, holder) {
             v   = partial.length === 0
                 ? '{}'
                 : gap
-                      ? '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}'
-                      : '{' + partial.join(',') + '}';
+                      ? '{\n' + gap + arrayProto.join(partial, ',\n' + gap) + '\n' + mind + '}'
+                      : '{' + arrayProto.join(partial, ',') + '}';
             gap = mind;
             return v;
     }
@@ -209,7 +210,7 @@ export function parse (text, reviver) {
         var k, v, value = holder[key];
         if (value && typeof value === 'object') {
             for (k in value) {
-                if (Object.prototype.hasOwnProperty.call(value, k)) {
+                if (functionProto.call(Object.prototype.hasOwnProperty, value, k)) {
                     v = walk(value, k);
                     if (v !== undefined) {
                         value[k] = v;
@@ -220,7 +221,7 @@ export function parse (text, reviver) {
                 }
             }
         }
-        return reviver.call(holder, key, value);
+        return functionProto.call(reviver, holder, key, value);
     }
 
 
@@ -230,10 +231,10 @@ export function parse (text, reviver) {
 
     text         = String(text);
     cx.lastIndex = 0;
-    if (cx.test(text)) {
-        text = text.replace(cx, function (a) {
+    if (regExpProto.test(cx, text)) {
+        text = stringProto.replace(text, cx, function (a) {
             return '\\u' +
-                   ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+                   stringProto.slice('0000' + stringProto.charCodeAt(a, 0).toString(16), (-4));
         });
     }
 
@@ -250,10 +251,11 @@ export function parse (text, reviver) {
     // we look to see that the remaining characters are only whitespace or ']' or
     // ',' or ':' or '{' or '}'. If that is so, then the text is safe for eval.
 
-    if (/^[\],:{}\s]*$/
-            .test(text.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, '@')
-                .replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']')
-                .replace(/(?:^|:|,)(?:\s*\[)+/g, ''))) {
+    if (regExpProto.test(/^[\],:{}\s]*$/, stringProto.replace(
+            stringProto.replace(
+                stringProto.replace(text, /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, '@'),
+                /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']'),
+            /(?:^|:|,)(?:\s*\[)+/g, ''))) {
 
         // In the third stage we use the eval function to compile the text into a
         // JavaScript structure. The '{' operator is subject to a syntactic ambiguity

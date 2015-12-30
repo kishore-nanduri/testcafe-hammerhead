@@ -7,6 +7,7 @@ import { sameOriginCheck } from '../utils/destination-location';
 import { getProxyUrl } from '../utils/url';
 import { isIE9 } from '../utils/browser';
 import { findDocument } from '../utils/dom';
+import { arrayProto, stringProto, functionProto } from '../../protos';
 
 export default class ClientDomAdapter extends BaseDomAdapter {
     removeAttr (el, attr) {
@@ -14,7 +15,7 @@ export default class ClientDomAdapter extends BaseDomAdapter {
     }
 
     getAttr (el, attr) {
-        return nativeMethods.getAttribute.call(el, attr);
+        return functionProto.call(nativeMethods.getAttribute, el, attr);
     }
 
     hasAttr (el, attr) {
@@ -34,7 +35,7 @@ export default class ClientDomAdapter extends BaseDomAdapter {
         var attrs = el.attributes;
 
         for (var i = 0; i < attrs.length; i++) {
-            if (this.EVENTS.indexOf(attrs[i]))
+            if (arrayProto.indexOf(this.EVENTS, attrs[i]))
                 return true;
         }
 
@@ -46,7 +47,7 @@ export default class ClientDomAdapter extends BaseDomAdapter {
     }
 
     setAttr (el, attr, value) {
-        return nativeMethods.setAttribute.call(el, attr, value);
+        return functionProto.call(nativeMethods.setAttribute, el, attr, value);
     }
 
     setScriptContent (script, content) {
@@ -66,8 +67,8 @@ export default class ClientDomAdapter extends BaseDomAdapter {
     }
 
     getElementForSelectorCheck (el) {
-        if (isIE9 && el.tagName.toLowerCase() === 'script') {
-            var clone = nativeMethods.cloneNode.call(el, false);
+        if (isIE9 && stringProto.toLowerCase(el.tagName) === 'script') {
+            var clone = functionProto.call(nativeMethods.cloneNode, el, false);
 
             clone.src = clone.innerHTML = '';
 
@@ -93,9 +94,9 @@ export default class ClientDomAdapter extends BaseDomAdapter {
     attachEventEmitter (domProcessor) {
         var eventEmitter = new EventEmitter();
 
-        domProcessor.on   = eventEmitter.on.bind(eventEmitter);
-        domProcessor.off  = eventEmitter.off.bind(eventEmitter);
-        domProcessor.emit = eventEmitter.emit.bind(eventEmitter);
+        domProcessor.on   = functionProto.bind(eventEmitter.on, eventEmitter);
+        domProcessor.off  = functionProto.bind(eventEmitter.off, eventEmitter);
+        domProcessor.emit = functionProto.bind(eventEmitter.emit, eventEmitter);
     }
 
     getCrossDomainPort () {
@@ -103,7 +104,7 @@ export default class ClientDomAdapter extends BaseDomAdapter {
     }
 
     getProxyUrl () {
-        return getProxyUrl.apply(null, arguments);
+        return functionProto.apply(getProxyUrl, null, arguments);
     }
 
     isTopParentIframe (el) {

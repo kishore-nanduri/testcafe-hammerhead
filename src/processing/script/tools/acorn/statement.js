@@ -1,6 +1,12 @@
+// -------------------------------------------------------------
+// WARNING: this file is used by both the client and the server.
+// Do not use any browser or node-specific API!
+// -------------------------------------------------------------
+
 import {types as tt} from "./tokentype"
 import {Parser} from "./state"
 import {lineBreak} from "./whitespace"
+import { arrayProto, regExpProto, stringProto } from '../../../../protos';
 
 const pp = Parser.prototype
 
@@ -16,7 +22,7 @@ pp.parseTopLevel = function(node) {
   if (!node.body) node.body = []
   while (this.type !== tt.eof) {
     let stmt = this.parseStatement(true, true)
-    node.body.push(stmt)
+    arrayProto.push(node.body, stmt)
     if (first) {
       if (this.isUseStrict(stmt)) this.setStrict(true)
       first = false
@@ -121,9 +127,9 @@ pp.parseDebuggerStatement = function(node) {
 
 pp.parseDoStatement = function(node) {
   this.next()
-  this.labels.push(loopLabel)
+  arrayProto.push(this.labels, loopLabel)
   node.body = this.parseStatement(false)
-  this.labels.pop()
+  arrayProto.pop(this.labels)
   this.expect(tt._while)
   node.test = this.parseParenExpression()
   if (this.options.ecmaVersion >= 6)
@@ -143,7 +149,7 @@ pp.parseDoStatement = function(node) {
 
 pp.parseForStatement = function(node) {
   this.next()
-  this.labels.push(loopLabel)
+  arrayProto.push(this.labels, loopLabel)
   this.expect(tt.parenL)
   if (this.type === tt.semi) return this.parseFor(node, null)
   if (this.type === tt._var || this.type === tt._let || this.type === tt._const) {
@@ -201,7 +207,7 @@ pp.parseSwitchStatement = function(node) {
   node.discriminant = this.parseParenExpression()
   node.cases = []
   this.expect(tt.braceL)
-  this.labels.push(switchLabel)
+  arrayProto.push(this.labels, switchLabel)
 
   // Statements under must be grouped (by label) in SwitchCase
   // nodes. `cur` is used to keep the node that we are currently
@@ -211,7 +217,7 @@ pp.parseSwitchStatement = function(node) {
     if (this.type === tt._case || this.type === tt._default) {
       let isCase = this.type === tt._case
       if (cur) this.finishNode(cur, "SwitchCase")
-      node.cases.push(cur = this.startNode())
+      arrayProto.push(node.cases, cur = this.startNode())
       cur.consequent = []
       this.next()
       if (isCase) {
@@ -224,18 +230,18 @@ pp.parseSwitchStatement = function(node) {
       this.expect(tt.colon)
     } else {
       if (!cur) this.unexpected()
-      cur.consequent.push(this.parseStatement(true))
+      arrayProto.push(cur.consequent, this.parseStatement(true))
     }
   }
   if (cur) this.finishNode(cur, "SwitchCase")
   this.next() // Closing brace
-  this.labels.pop()
+  arrayProto.pop(this.labels)
   return this.finishNode(node, "SwitchStatement")
 }
 
 pp.parseThrowStatement = function(node) {
   this.next()
-  if (lineBreak.test(this.input.slice(this.lastTokEnd, this.start)))
+  if (regExpProto.test(lineBreak, stringProto.slice(this.input, this.lastTokEnd, this.start)))
     this.raise(this.lastTokEnd, "Illegal newline after throw")
   node.argument = this.parseExpression()
   this.semicolon()
@@ -276,9 +282,9 @@ pp.parseVarStatement = function(node, kind) {
 pp.parseWhileStatement = function(node) {
   this.next()
   node.test = this.parseParenExpression()
-  this.labels.push(loopLabel)
+  arrayProto.push(this.labels, loopLabel)
   node.body = this.parseStatement(false)
-  this.labels.pop()
+  arrayProto.pop(this.labels)
   return this.finishNode(node, "WhileStatement")
 }
 
@@ -306,9 +312,9 @@ pp.parseLabeledStatement = function(node, maybeName, expr) {
       label.kind = kind;
     } else break;
   }
-  this.labels.push({name: maybeName, kind: kind, statementStart: this.start})
+  arrayProto.push(this.labels, {name: maybeName, kind: kind, statementStart: this.start})
   node.body = this.parseStatement(true)
-  this.labels.pop()
+  arrayProto.pop(this.labels)
   node.label = expr
   return this.finishNode(node, "LabeledStatement")
 }
@@ -329,7 +335,7 @@ pp.parseBlock = function(allowStrict) {
   this.expect(tt.braceL)
   while (!this.eat(tt.braceR)) {
     let stmt = this.parseStatement(true)
-    node.body.push(stmt)
+    arrayProto.push(node.body, stmt)
     if (first && allowStrict && this.isUseStrict(stmt)) {
       oldStrict = this.strict
       this.setStrict(this.strict = true)
@@ -352,7 +358,7 @@ pp.parseFor = function(node, init) {
   node.update = this.type === tt.parenR ? null : this.parseExpression()
   this.expect(tt.parenR)
   node.body = this.parseStatement(false)
-  this.labels.pop()
+  arrayProto.pop(this.labels)
   return this.finishNode(node, "ForStatement")
 }
 
@@ -366,7 +372,7 @@ pp.parseForIn = function(node, init) {
   node.right = this.parseExpression()
   this.expect(tt.parenR)
   node.body = this.parseStatement(false)
-  this.labels.pop()
+  arrayProto.pop(this.labels)
   return this.finishNode(node, type)
 }
 
@@ -387,7 +393,7 @@ pp.parseVar = function(node, isFor, kind) {
     } else {
       decl.init = null
     }
-    node.declarations.push(this.finishNode(decl, "VariableDeclarator"))
+    arrayProto.push(node.declarations, this.finishNode(decl, "VariableDeclarator"))
     if (!this.eat(tt.comma)) break
   }
   return node
@@ -476,7 +482,7 @@ pp.parseClass = function(node, isStatement) {
 
 pp.parseClassMethod = function(classBody, method, isGenerator) {
   method.value = this.parseMethod(isGenerator)
-  classBody.body.push(this.finishNode(method, "MethodDefinition"))
+  arrayProto.push(classBody.body, this.finishNode(method, "MethodDefinition"))
 }
 
 pp.parseClassId = function(node, isStatement) {
@@ -527,7 +533,7 @@ pp.parseExport = function(node) {
     } else {
       // check for keywords used as local names
       for (let i = 0; i < node.specifiers.length; i++) {
-        if (this.keywords.test(node.specifiers[i].local.name) || this.reservedWords.test(node.specifiers[i].local.name)) {
+        if (regExpProto.test(this.keywords, node.specifiers[i].local.name) || regExpProto.test(this.reservedWords, node.specifiers[i].local.name)) {
           this.unexpected(node.specifiers[i].local.start)
         }
       }
@@ -558,7 +564,7 @@ pp.parseExportSpecifiers = function() {
     let node = this.startNode()
     node.local = this.parseIdent(this.type === tt._default)
     node.exported = this.eatContextual("as") ? this.parseIdent(true) : node.local
-    nodes.push(this.finishNode(node, "ExportSpecifier"))
+    arrayProto.push(nodes, this.finishNode(node, "ExportSpecifier"))
   }
   return nodes
 }
@@ -589,7 +595,7 @@ pp.parseImportSpecifiers = function() {
     let node = this.startNode()
     node.local = this.parseIdent()
     this.checkLVal(node.local, true)
-    nodes.push(this.finishNode(node, "ImportDefaultSpecifier"))
+    arrayProto.push(nodes, this.finishNode(node, "ImportDefaultSpecifier"))
     if (!this.eat(tt.comma)) return nodes
   }
   if (this.type === tt.star) {
@@ -598,7 +604,7 @@ pp.parseImportSpecifiers = function() {
     this.expectContextual("as")
     node.local = this.parseIdent()
     this.checkLVal(node.local, true)
-    nodes.push(this.finishNode(node, "ImportNamespaceSpecifier"))
+    arrayProto.push(nodes, this.finishNode(node, "ImportNamespaceSpecifier"))
     return nodes
   }
   this.expect(tt.braceL)
@@ -612,7 +618,7 @@ pp.parseImportSpecifiers = function() {
     node.imported = this.parseIdent(true)
     node.local = this.eatContextual("as") ? this.parseIdent() : node.imported
     this.checkLVal(node.local, true)
-    nodes.push(this.finishNode(node, "ImportSpecifier"))
+    arrayProto.push(nodes, this.finishNode(node, "ImportSpecifier"))
   }
   return nodes
 }

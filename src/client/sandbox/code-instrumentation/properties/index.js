@@ -21,6 +21,7 @@ import INSTRUCTION from '../../../../processing/script/instruction';
 import { shouldInstrumentProperty } from '../../../../processing/script/instrumented';
 import { setTimeout as nativeSetTimeout } from '../../native-methods';
 import { emptyActionAttrFallbacksToTheLocation } from '../../../utils/feature-detection';
+import { regExpProto, stringProto, arrayProto, functionProto } from '../../../../protos';
 
 const ORIGINAL_WINDOW_ON_ERROR_HANDLER_KEY = 'hammerhead|original-window-on-error-handler-key';
 
@@ -52,7 +53,7 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
         else if (attrValue === null)
             return '';
 
-        else if (/^#/.test(attrValue))
+        else if (regExpProto.test(/^#/, attrValue))
             return destLocation.withHash(attrValue);
 
         return urlUtils.resolveUrlAsDest(attrValue);
@@ -65,7 +66,7 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
             action: {
                 condition: el => {
                     if (domUtils.isDomElement(el))
-                        return URL_ATTR_TAGS['action'].indexOf(el.tagName.toLowerCase()) !== -1;
+                        return arrayProto.indexOf(URL_ATTR_TAGS['action'], stringProto.toLowerCase(el.tagName)) !== -1;
 
                     return false;
                 },
@@ -113,7 +114,7 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
             data: {
                 condition: el => {
                     if (domUtils.isDomElement(el))
-                        return URL_ATTR_TAGS['data'].indexOf(el.tagName.toLowerCase()) !== -1;
+                        return arrayProto.indexOf(URL_ATTR_TAGS['data'], stringProto.toLowerCase(el.tagName)) !== -1;
 
                     return false;
                 },
@@ -161,7 +162,7 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
             href: {
                 condition: el => {
                     if (domUtils.isDomElement(el))
-                        return URL_ATTR_TAGS['href'].indexOf(el.tagName.toLowerCase()) !== -1;
+                        return arrayProto.indexOf(URL_ATTR_TAGS['href'], stringProto.toLowerCase(el.tagName)) !== -1;
 
                     return LocationAccessorsInstrumentation.isLocationWrapper(el);
                 },
@@ -176,7 +177,7 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
                 get:       el => cleanUpHtml(el.innerHTML, el.tagName),
 
                 set: (el, value) => {
-                    if (el.tagName && el.tagName.toLowerCase() === 'style')
+                    if (el.tagName && stringProto.toLowerCase(el.tagName) === 'style')
                         value = processStyle('' + value, urlUtils.getProxyUrl, true);
                     else if (value !== null)
                         value = processHtml('' + value, el.tagName);
@@ -197,14 +198,14 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
                     // NOTE: Fix for B239138 - unroll.me 'Cannot read property 'document' of null' error raised
                     // during recording. There was an issue when the document.body was replaced, so we need to
                     // reattach UI to a new body manually.
-                    var containerTagName = el.tagName && el.tagName.toLowerCase();
+                    var containerTagName = el.tagName && stringProto.toLowerCase(el.tagName);
 
                     // NOTE: This check is required because jQuery calls the set innerHTML method for an element
                     // in an unavailable window.
                     if (window.self) {
                         // NOTE: Use timeout, so that changes take effect.
                         if (containerTagName === 'html' || containerTagName === 'body')
-                            nativeSetTimeout.call(window, () => this.nodeMutation.onBodyContentChanged(el), 0);
+                            functionProto.call(nativeSetTimeout, window, () => this.nodeMutation.onBodyContentChanged(el), 0);
                     }
 
                     return value;
@@ -212,7 +213,7 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
             },
 
             innerText: {
-                condition: el => typeof el.tagName === 'string' && el.tagName.toLowerCase() === 'script' &&
+                condition: el => typeof el.tagName === 'string' && stringProto.toLowerCase(el.tagName) === 'script' &&
                                  typeof el.innerText === 'string',
 
                 get: el => typeof el.innerText === 'string' ? removeProcessingHeader(el.innerText) : el.innerText,
@@ -256,7 +257,7 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
 
                     for (var i = 0; i < collection.length; i++) {
                         if (collection[i].className &&
-                            collection[i].className.indexOf(SHADOW_UI_CLASSNAME.postfix) !== -1)
+                            stringProto.indexOf(collection[i].className, SHADOW_UI_CLASSNAME.postfix) !== -1)
                             elementCount++;
                     }
 
@@ -303,7 +304,7 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
             manifest: {
                 condition: el => {
                     if (domUtils.isDomElement(el))
-                        return URL_ATTR_TAGS['manifest'].indexOf(el.tagName.toLowerCase()) !== -1;
+                        return arrayProto.indexOf(URL_ATTR_TAGS['manifest'], stringProto.toLowerCase(el.tagName)) !== -1;
 
                     return false;
                 },
@@ -367,7 +368,7 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
             src: {
                 condition: el => {
                     if (domUtils.isDomElement(el))
-                        return URL_ATTR_TAGS['src'].indexOf(el.tagName.toLowerCase()) !== -1;
+                        return arrayProto.indexOf(URL_ATTR_TAGS['src'], stringProto.toLowerCase(el.tagName)) !== -1;
 
                     return false;
                 },
@@ -377,7 +378,7 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
             },
 
             target: {
-                condition: el => domUtils.isDomElement(el) && TARGET_ATTR_TAGS[el.tagName.toLowerCase()],
+                condition: el => domUtils.isDomElement(el) && TARGET_ATTR_TAGS[stringProto.toLowerCase(el.tagName)],
                 get:       el => el.target,
 
                 set: (el, value) => {
@@ -390,7 +391,7 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
 
             text: {
                 // NOTE: Check for tagName being a string, because it may be a function in an Angular app (T175340).
-                condition: el => typeof el.tagName === 'string' && el.tagName.toLowerCase() === 'script',
+                condition: el => typeof el.tagName === 'string' && stringProto.toLowerCase(el.tagName) === 'script',
                 get:       el => typeof el.text === 'string' ? removeProcessingHeader(el.text) : el.text,
 
                 set: (el, script) => {
@@ -402,7 +403,7 @@ export default class PropertyAccessorsInstrumentation extends SandboxBase {
 
             textContent: {
                 // NOTE: Check for tagName being a string, because it may be a function in an Angular app (T175340).
-                condition: el => typeof el.tagName === 'string' && el.tagName.toLowerCase() === 'script',
+                condition: el => typeof el.tagName === 'string' && stringProto.toLowerCase(el.tagName) === 'script',
                 get:       el => typeof el.textContent === 'string' ?
                                  removeProcessingHeader(el.textContent) : el.textContent,
 

@@ -5,6 +5,7 @@ import domProcessor from '../dom-processor';
 import { remove as removeProcessingHeader } from '../../processing/script/header';
 import { find } from './dom';
 import { convertToProxyUrl } from '../utils/url';
+import { stringProto, regExpProto, arrayProto, functionProto } from '../../protos';
 
 const TEXT_NODE_COMMENT_MARKER = 'hammerhead|text-node-comment-marker';
 
@@ -44,13 +45,13 @@ function getHtmlDocument () {
 }
 
 export function isPageHtml (html) {
-    return /^\s*(<\s*(!doctype|html|head|body)[^>]*>)/i.test(html);
+    return regExpProto.test(/^\s*(<\s*(!doctype|html|head|body)[^>]*>)/i, html);
 }
 
 function processPageTag (pageTagHtml, process) {
-    pageTagHtml = pageTagHtml.replace(/^(\s*<\s*)(head|body|html)/i, '$1fakeTagName_$2');
+    pageTagHtml = stringProto.replace(pageTagHtml, /^(\s*<\s*)(head|body|html)/i, '$1fakeTagName_$2');
 
-    return process(pageTagHtml).replace(/<\/fakeTagName_[\s\S]+$/i, '').replace(/fakeTagName_/i, '');
+    return stringProto.replace(stringProto.replace(process(pageTagHtml), /<\/fakeTagName_[\s\S]+$/i, ''), /fakeTagName_/i, '');
 }
 
 function processPageHtml (html, process) {
@@ -59,12 +60,12 @@ function processPageHtml (html, process) {
     var htmlContentRegEx = /^(\s*<\s*head[^>]*>)([\s\S]*?)(<\s*\/head\s*>\s*)(<\s*body[^>]*>)([\s\S]*?)(<\s*\/body\s*>\s*)?$/i;
     var htmlRegEx        = /^(\s*<\s*html[^>]*>)([\s\S]*?)(<\s*\/html\s*>\s*)?$/i;
 
-    var doctypeMatches = html.match(doctypeRegEx);
+    var doctypeMatches = stringProto.match(html, doctypeRegEx);
 
     if (doctypeMatches)
         return doctypeMatches[1] + process(doctypeMatches[2]);
 
-    var htmlMatches = html.match(htmlRegEx);
+    var htmlMatches = stringProto.match(html, htmlRegEx);
 
     if (htmlMatches) {
         return processPageTag(htmlMatches[1], process) +
@@ -72,7 +73,7 @@ function processPageHtml (html, process) {
                (htmlMatches[3] || '');
     }
 
-    var htmlContentMatches = html.match(htmlContentRegEx);
+    var htmlContentMatches = stringProto.match(html, htmlContentRegEx);
 
     if (htmlContentMatches) {
         return processPageTag(htmlContentMatches[1], process) +
@@ -83,7 +84,7 @@ function processPageHtml (html, process) {
                (htmlContentMatches[6] || '');
     }
 
-    var headBodyMatches = html.match(headBodyRegEx);
+    var headBodyMatches = stringProto.match(html, headBodyRegEx);
 
     if (headBodyMatches) {
         return processPageTag(headBodyMatches[1], process) +
@@ -96,7 +97,7 @@ function wrapTextNodes (html) {
     var textNodeRegEx = /(<\s*(table|tbody|\/tbody|\/tfoot|\/thead|\/tr|tfoot|thead|tr|\/td)[^>]*>)(\s*[^<\s]+[^<]*)(?=<)/ig;
     var index         = 0;
 
-    return html.replace(textNodeRegEx, (str, p1, p2, p3) => {
+    return stringProto.replace(html, textNodeRegEx, (str, p1, p2, p3) => {
         var marker = TEXT_NODE_COMMENT_MARKER + (index++).toString();
 
         return p1 + '<!--' + marker + p3 + marker + '-->';
@@ -109,8 +110,8 @@ function unwrapTextNodes (html) {
 
     do {
         marker = TEXT_NODE_COMMENT_MARKER + i;
-        html   = html.replace('<!--' + marker, '').replace(marker + '-->', '');
-    } while (html.indexOf(TEXT_NODE_COMMENT_MARKER + ++i) !== -1);
+        html   = stringProto.replace(stringProto.replace(html, '<!--' + marker, ''), marker + '-->', '');
+    } while (stringProto.indexOf(html, TEXT_NODE_COMMENT_MARKER + ++i) !== -1);
 
     return html;
 }
@@ -121,9 +122,9 @@ function processHtmlInternal (html, parentTag, process) {
     var container = getHtmlDocument().createElement('div');
 
     htmlParser.innerHTML = '';
-    nativeMethods.appendChild.call(htmlParser, container);
+    functionProto.call(nativeMethods.appendChild, htmlParser, container);
 
-    parentTag = parentTag ? parentTag.toLowerCase() : '';
+    parentTag = parentTag ? stringProto.toLowerCase(parentTag) : '';
 
     var isRow    = parentTag === 'tr';
     var isTable  = parentTag === 'table' || parentTag === 'tbody';
@@ -142,11 +143,11 @@ function processHtmlInternal (html, parentTag, process) {
         html = container.innerHTML;
 
     if (isTable)
-        html = html.replace(/^<table>(<tbody>)?|(<\/tbody>)?<\/table>$/ig, '');
+        html = stringProto.replace(html, /^<table>(<tbody>)?|(<\/tbody>)?<\/table>$/ig, '');
     else if (isRow)
-        html = html.replace(/^<table>(<tbody>)?<tr>|<\/tr>(<\/tbody>)?<\/table>$/ig, '');
+        html = stringProto.replace(html, /^<table>(<tbody>)?<tr>|<\/tr>(<\/tbody>)?<\/table>$/ig, '');
     else if (isScript)
-        html = html.replace(/^<script>|<\/script>$/ig, '');
+        html = stringProto.replace(html, /^<script>|<\/script>$/ig, '');
 
     return unwrapTextNodes(html);
 }
@@ -165,8 +166,8 @@ export function cleanUpHtml (html, parentTag) {
 
             find(container, '[' + storedAttr + ']', el => {
                 if (el.hasAttribute(attr)) {
-                    nativeMethods.setAttribute.call(el, attr, nativeMethods.getAttribute.call(el, storedAttr));
-                    nativeMethods.removeAttribute.call(el, storedAttr);
+                    functionProto.call(nativeMethods.setAttribute, el, attr, functionProto.call(nativeMethods.getAttribute, el, storedAttr));
+                    functionProto.call(nativeMethods.removeAttribute, el, storedAttr);
 
                     changed = true;
                 }
@@ -193,14 +194,14 @@ export function cleanUpHtml (html, parentTag) {
         });
 
         find(container, '[' + INTERNAL_ATTRS.hoverPseudoClass + ']', el => {
-            nativeMethods.removeAttribute.call(el, INTERNAL_ATTRS.hoverPseudoClass);
+            functionProto.call(nativeMethods.removeAttribute, el, INTERNAL_ATTRS.hoverPseudoClass);
 
             changed = true;
         });
 
         if (parentTag === 'head' || parentTag === 'body') {
-            if (container.innerHTML.indexOf(INIT_SCRIPT_FOR_IFRAME_TEMPLATE) !== -1) {
-                container.innerHTML = container.innerHTML.replace(INIT_SCRIPT_FOR_IFRAME_TEMPLATE, '');
+            if (stringProto.indexOf(container.innerHTML, INIT_SCRIPT_FOR_IFRAME_TEMPLATE) !== -1) {
+                container.innerHTML = stringProto.replace(container.innerHTML, INIT_SCRIPT_FOR_IFRAME_TEMPLATE, '');
 
                 changed = true;
             }
@@ -244,23 +245,23 @@ export function isWellFormattedHtml (html) {
     var selfClosedTags = ['colgroup', 'dd', 'dt', 'li', 'options', 'p', 'td', 'tfoot', 'th', 'thead', 'tr'];
 
     var lastItem      = arr => arr[arr.length - 1];
-    var contains      = (arr, item) => arr.indexOf(item) !== -1;
+    var contains      = (arr, item) => arrayProto.indexOf(arr, item) !== -1;
     var parseStartTag = (tag, tagName, attributes, unary) => {
         if (!contains(voidElements, tagName)) {
             if (!unary) {
-                tagName = tagName.toLowerCase();
-                tagStack.push(tagName);
+                tagName = stringProto.toLowerCase(tagName);
+                arrayProto.push(tagStack, tagName);
             }
         }
     };
 
     var parseEndTag = (tag, tagName) => {
-        tagName = tagName.toLowerCase();
+        tagName = stringProto.toLowerCase(tagName);
 
         if (tagName === lastItem(tagStack))
-            tagStack.pop();
+            arrayProto.pop(tagStack);
         else if (contains(selfClosedTags, lastItem(tagStack))) {
-            tagStack.pop();
+            arrayProto.pop(tagStack);
             parseEndTag(tag, tagName);
         }
         else if (contains(voidElements, tagName))
@@ -295,52 +296,52 @@ export function isWellFormattedHtml (html) {
             // NOTE: Not in a script or style element.
             if (!lastItem(tagStack) || !contains(rawTextElements, lastItem(tagStack))) {
                 // html comment
-                if (html.indexOf(BEGIN_COMMENT) === 0) {
-                    charIndex  = html.indexOf(END_COMMENT);
-                    html       = html.substring(charIndex + 3);
+                if (stringProto.indexOf(html, BEGIN_COMMENT) === 0) {
+                    charIndex  = stringProto.indexOf(html, END_COMMENT);
+                    html       = stringProto.substring(html, charIndex + 3);
                     isPlanText = false;
                 }
                 // NOTE: Doctype declaration.
-                else if (html.indexOf(DOCTYPE_DECLARATION) === 0) {
-                    match = html.match(doctypeReg);
+                else if (stringProto.indexOf(html, DOCTYPE_DECLARATION) === 0) {
+                    match = stringProto.match(html, doctypeReg);
 
                     if (match) {
-                        html       = html.substring(match[0].length);
+                        html       = stringProto.substring(html, match[0].length);
                         isPlanText = false;
                     }
                 }
                 // NOTE: End tag.
-                else if (html.indexOf(END_TAG) === 0) {
-                    match = html.match(endTagReg);
+                else if (stringProto.indexOf(html, END_TAG) === 0) {
+                    match = stringProto.match(html, endTagReg);
 
                     if (match) {
-                        html       = html.substring(match[0].length);
-                        match[0].replace(endTagReg, parseEndTag);
+                        html       = stringProto.substring(html, match[0].length);
+                        stringProto.replace(match[0], endTagReg, parseEndTag);
                         isPlanText = false;
                     }
                 }
-                else if (html.indexOf(BEGIN_TAG) === 0) {
-                    match = html.match(startTagReg);
+                else if (stringProto.indexOf(html, BEGIN_TAG) === 0) {
+                    match = stringProto.match(html, startTagReg);
 
                     if (match) {
-                        html       = html.substring(match[0].length);
-                        match[0].replace(startTagReg, parseStartTag);
+                        html       = stringProto.substring(html, match[0].length);
+                        stringProto.replace(match[0], startTagReg, parseStartTag);
                         isPlanText = false;
                     }
                 }
 
                 if (isPlanText) {
-                    charIndex = html.indexOf(BEGIN_TAG);
-                    html      = charIndex === -1 ? '' : html.substring(charIndex);
+                    charIndex = stringProto.indexOf(html, BEGIN_TAG);
+                    html      = charIndex === -1 ? '' : stringProto.substring(html, charIndex);
                 }
             }
             else {
                 var tagContentReg = new RegExp('^([\\s\\S]*?)<\/' + lastItem(tagStack) + '[^>]*>');
 
-                match = html.match(tagContentReg);
+                match = stringProto.match(html, tagContentReg);
 
                 if (match) {
-                    html = html.substring(match[0].length);
+                    html = stringProto.substring(html, match[0].length);
                     parseEndTag('', lastItem(tagStack));
                 }
                 else

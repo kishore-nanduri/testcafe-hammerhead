@@ -1,4 +1,5 @@
 import { getTopSameDomainWindow } from '../utils/dom';
+import { arrayProto } from '../../protos';
 
 const SANDBOXES_STORAGE = 'hammerhead|sandboxes-storage';
 
@@ -8,7 +9,7 @@ export function addSandboxToStorage (window, sandbox) {
     if (!topSameDomainWindow[SANDBOXES_STORAGE])
         topSameDomainWindow[SANDBOXES_STORAGE] = [];
 
-    topSameDomainWindow[SANDBOXES_STORAGE].push({
+    arrayProto.push(topSameDomainWindow[SANDBOXES_STORAGE], {
         iframe:  window !== topSameDomainWindow ? window.frameElement : null,
         sandbox: sandbox
     });

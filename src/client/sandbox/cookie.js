@@ -6,6 +6,7 @@ import * as destLocation from '../utils/destination-location';
 import * as cookieUtils from '../utils/cookie';
 import { isCrossDomainWindows } from '../utils/dom';
 import { queuedAsyncServiceMsg } from '../transport';
+import { stringProto, arrayProto } from '../../protos';
 
 export default class CookieSandbox extends SandboxBase {
     _getSettings () {
@@ -41,7 +42,7 @@ export default class CookieSandbox extends SandboxBase {
         cookieUtils.del(document, parsedCookieCopy);
 
         if (processedByBrowserCookieStr)
-            return processedByBrowserCookieStr.substr(uniquePrefix.length);
+            return stringProto.substr(processedByBrowserCookieStr, uniquePrefix.length);
 
         return null;
     }
@@ -71,17 +72,17 @@ export default class CookieSandbox extends SandboxBase {
     }
 
     _updateClientCookieStr (cookieKey, newCookieStr) {
-        var cookies  = this._getSettings().cookie ? this._getSettings().cookie.split(';') : [];
+        var cookies  = this._getSettings().cookie ? stringProto.split(this._getSettings().cookie, ';') : [];
         var replaced = false;
 
         // NOTE: Replace a cookie if it already exists.
         for (var i = 0; i < cookies.length; i++) {
             cookies[i] = trim(cookies[i]);
 
-            if (cookies[i].indexOf(cookieKey + '=') === 0 || cookies[i] === cookieKey) {
+            if (stringProto.indexOf(cookies[i], cookieKey + '=') === 0 || cookies[i] === cookieKey) {
                 // NOTE: Delete or update a cookie string.
                 if (newCookieStr === null)
-                    cookies.splice(i, 1);
+                    arrayProto.splice(cookies, i, 1);
                 else
                     cookies[i] = newCookieStr;
 
@@ -90,9 +91,9 @@ export default class CookieSandbox extends SandboxBase {
         }
 
         if (!replaced && newCookieStr !== null)
-            cookies.push(newCookieStr);
+            arrayProto.push(cookies, newCookieStr);
 
-        this._getSettings().cookie = cookies.join('; ');
+        this._getSettings().cookie = arrayProto.join(cookies, '; ');
     }
 
     getCookie () {

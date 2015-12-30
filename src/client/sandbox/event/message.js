@@ -8,6 +8,7 @@ import { parse as parseJSON, stringify as stringifyJSON } from '../../json';
 import { isIE9 } from '../../utils/browser';
 import { isCrossDomainWindows } from '../../utils/dom';
 import { isObjectEventListener } from '../../utils/event';
+import { functionProto, arrayProto } from '../../../protos';
 
 /*eslint-enable no-native-reassign */
 
@@ -60,7 +61,7 @@ export default class MessageSandbox extends SandboxBase {
 
         /* jshint ignore:start */
         for (var key in e)
-            resultEvt[key] = typeof e[key] === 'function' ? e[key].bind(e) : e[key];
+            resultEvt[key] = typeof e[key] === 'function' ? functionProto.bind(e[key], e) : e[key];
         /* jshint ignore:end */
 
         var data = typeof e.data === 'string' ? parseJSON(e.data) : e.data;
@@ -77,9 +78,9 @@ export default class MessageSandbox extends SandboxBase {
                 resultEvt.data = needToStringify ? stringifyJSON(data.message) : data.message;
 
                 if (isObjectEventListener(originListener))
-                    return originListener.handleEvent.call(originListener, resultEvt);
+                    return functionProto.call(originListener.handleEvent, originListener, resultEvt);
 
-                return originListener.call(this.window, resultEvt);
+                return functionProto.call(originListener, this.window, resultEvt);
             }
         }
     }
@@ -111,7 +112,7 @@ export default class MessageSandbox extends SandboxBase {
     _removeInternalMsgFromQueue (sendFunc) {
         for (var index = 0, length = this.iframeInternalMsgQueue.length; index < length; index++) {
             if (this.iframeInternalMsgQueue[index].sendFunc === sendFunc) {
-                this.iframeInternalMsgQueue.splice(index, 1);
+                arrayProto.splice(this.iframeInternalMsgQueue, index, 1);
 
                 return true;
             }
@@ -134,8 +135,8 @@ export default class MessageSandbox extends SandboxBase {
             }
         });
 
-        var onMessageHandler        = this._onMessage.bind(this);
-        var onWindowMessageHandler  = this._onWindowMessage.bind(this);
+        var onMessageHandler        = functionProto.bind(this._onMessage, this);
+        var onWindowMessageHandler  = functionProto.bind(this._onWindowMessage, this);
 
         this.listeners.addInternalEventListener(window, ['message'], onMessageHandler);
         this.listeners.setEventListenerWrapper(window, ['message'], onWindowMessageHandler);
@@ -208,9 +209,9 @@ export default class MessageSandbox extends SandboxBase {
             };
 
             // NOTE: Imitation of a delay for the postMessage method.
-            var timeoutId = nativeMethods.setTimeout.call(this.topWindow, sendFunc, 10);
+            var timeoutId = functionProto.call(nativeMethods.setTimeout, this.topWindow, sendFunc, 10);
 
-            this.iframeInternalMsgQueue.push({ timeoutId, sendFunc });
+            arrayProto.push(this.iframeInternalMsgQueue, { timeoutId, sendFunc });
 
             return null;
         }
@@ -245,7 +246,7 @@ export default class MessageSandbox extends SandboxBase {
                 pingTimeout       = null;
             };
 
-            pingTimeout = nativeMethods.setTimeout.call(this.window, () => {
+            pingTimeout = functionProto.call(nativeMethods.setTimeout, this.window, () => {
                 cleanTimeouts();
                 resolve(true);
             }, shortWaiting ? this.PING_IFRAME_MIN_TIMEOUT : this.PING_IFRAME_TIMEOUT);
@@ -258,7 +259,7 @@ export default class MessageSandbox extends SandboxBase {
             this.pingCmd = pingMessageCommand;
 
             sendPingRequest();
-            pingInterval = nativeMethods.setInterval.call(this.window, sendPingRequest, this.PING_DELAY);
+            pingInterval = functionProto.call(nativeMethods.setInterval, this.window, sendPingRequest, this.PING_DELAY);
         });
     }
 }

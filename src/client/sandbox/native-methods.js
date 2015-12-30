@@ -1,4 +1,6 @@
 /*global Document, Window */
+import { functionProto } from '../../protos';
+
 class NativeMethods {
     constructor (doc, win) {
         this.refreshDocumentMeths(doc);
@@ -34,7 +36,7 @@ class NativeMethods {
     refreshElementMeths (doc, win) {
         win = win || window;
 
-        var createElement = tagName => this.createElement.call(doc || document, tagName);
+        var createElement = tagName => functionProto.call(this.createElement, doc || document, tagName);
         var nativeElement = createElement('div');
 
         // Dom

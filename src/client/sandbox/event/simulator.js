@@ -6,6 +6,7 @@ import * as domUtils from '../../utils/dom';
 import * as eventUtils from '../../utils/event';
 import { getOffsetPosition, offsetToClientCoords } from '../../utils/position';
 import { getBordersWidth, getElementScroll } from '../../utils/style';
+import { dateStatic, regExpProto, functionProto, arrayProto, objectStatic, stringProto } from '../../../protos';
 
 const IE_BUTTONS_MAP = {
     0: 1,
@@ -28,7 +29,7 @@ export default class EventSimulator {
     constructor () {
         this.DISPATCHED_EVENT_FLAG = 'hammerhead|dispatched-event';
 
-        this.touchIdentifier  = Date.now();
+        this.touchIdentifier  = dateStatic.now();
         this.clickedFileInput = null;
         // NOTE: (IE only) If event dispatching calls a native click function, we should clear the window.event
         // property (which was set in the raiseDispatchEvent function). Otherwise, the window.event property will
@@ -134,7 +135,7 @@ export default class EventSimulator {
         if (!opts.relatedTarget)
             opts.relatedTarget = document.body;
 
-        if (MOUSE_EVENT_NAME_RE.test(event)) {
+        if (regExpProto.test(MOUSE_EVENT_NAME_RE, event)) {
             if (userOptions && typeof userOptions.button !== 'undefined')
                 opts = extend(opts, { button: userOptions.button });
 
@@ -144,7 +145,7 @@ export default class EventSimulator {
             /* eslint-enable no-shadow */
         }
 
-        else if (KEY_EVENT_NAME_RE.test(event)) {
+        else if (regExpProto.test(KEY_EVENT_NAME_RE, event)) {
             if (userOptions &&
                 (typeof userOptions.keyCode !== 'undefined' || typeof userOptions.charCode !== 'undefined')) {
                 opts = extend(opts, {
@@ -159,7 +160,7 @@ export default class EventSimulator {
             /* eslint-enable no-shadow */
         }
 
-        else if (TOUCH_EVENT_NAME_RE.test(event)) {
+        else if (regExpProto.test(TOUCH_EVENT_NAME_RE, event)) {
             args     = this._getTouchEventArgs(event, extend(opts, { target: el }));
             dispatch = EventSimulator._dispatchTouchEvent;
         }
@@ -215,14 +216,14 @@ export default class EventSimulator {
         if (browserUtils.isIE && browserUtils.version <= 11)
             delete curWindow.event;
 
-        originClick.call(el);
+        functionProto.call(originClick, el);
 
         if (browserUtils.isIE && browserUtils.version < 11) {
             if (this.savedNativeClickCount--)
-                this.savedWindowEvents.shift();
+                arrayProto.shift(this.savedWindowEvents);
 
             if (this.savedWindowEvents.length) {
-                Object.defineProperty(curWindow, 'event', {
+                objectStatic.defineProperty(curWindow, 'event', {
                     get:          () => this.savedWindowEvents[0],
                     configurable: true
                 });
@@ -232,7 +233,7 @@ export default class EventSimulator {
         // NOTE: Window.event becomes empty when the click event handler
         // triggers the click event for a different element in IE11.(GH-226).
         if (browserUtils.isIE11 && prevWindowEvent) {
-            Object.defineProperty(curWindow, 'event', {
+            objectStatic.defineProperty(curWindow, 'event', {
                 get:          () => prevWindowEvent,
                 configurable: true
             });
@@ -273,13 +274,13 @@ export default class EventSimulator {
                 if (el.parentNode && domUtils.closest(el.parentNode, 'button')) {
                     var closestButton = domUtils.closest(el.parentNode, 'button');
 
-                    if (nativeMethods.getAttribute.call(closestButton, 'type') === 'submit')
+                    if (functionProto.call(nativeMethods.getAttribute, closestButton, 'type') === 'submit')
                         el = closestButton;
                 }
             }
         }
 
-        if (browserUtils.isIE && browserUtils.version > 9 && pointerRegExp.test(args.type)) {
+        if (browserUtils.isIE && browserUtils.version > 9 && regExpProto.test(pointerRegExp, args.type)) {
             var pointEvent       = browserUtils.version >
                                    10 ? document.createEvent('PointerEvent') : document.createEvent('MSPointerEvent');
             var elPosition       = getOffsetPosition(el);
@@ -288,7 +289,7 @@ export default class EventSimulator {
                 x: elPosition.left + elBorders.left,
                 y: elPosition.top + elBorders.top
             });
-            var eventShortType   = args.type.replace('mouse', '');
+            var eventShortType   = stringProto.replace(args.type, 'mouse', '');
             var pArgs            = extend({
                 widthArg:       browserUtils.version > 10 ? 1 : 0,
                 heightArg:      browserUtils.version > 10 ? 1 : 0,
@@ -299,13 +300,13 @@ export default class EventSimulator {
                 // NOTE: This parameter must be "1" for “mouse”.
                 pointerIdArg:   1,
                 pointerType:    browserUtils.version > 10 ? 'mouse' : 4,
-                hwTimestampArg: Date.now(),
+                hwTimestampArg: dateStatic.now(),
                 isPrimary:      true
             }, args);
 
             pArgs.type       = browserUtils.version > 10 ? 'pointer' + eventShortType : 'MSPointer' +
-                                                                                        eventShortType.charAt(0).toUpperCase() +
-                                                                                        eventShortType.substring(1);
+                                                                                        stringProto.toUpperCase(stringProto.charAt(eventShortType, 0)) +
+                                                                                        stringProto.substring(eventShortType, 1);
             pArgs.offsetXArg = args.clientX - elClientPosition.x;
             pArgs.offsetYArg = args.clientY - elClientPosition.y;
             pArgs.button     = args.buttons ===
@@ -319,17 +320,17 @@ export default class EventSimulator {
                 pArgs.hwTimestampArg, pArgs.isPrimary);
 
             // NOTE: After dispatching the pointer event, it doesn't contain the 'target' and 'relatedTarget' properties.
-            Object.defineProperty(pointEvent, 'target', {
+            objectStatic.defineProperty(pointEvent, 'target', {
                 get:          () => el,
                 configurable: true
             });
 
-            Object.defineProperty(pointEvent, 'relatedTarget', {
+            objectStatic.defineProperty(pointEvent, 'relatedTarget', {
                 get:          () => args.relatedTarget,
                 configurable: true
             });
 
-            Object.defineProperty(pointEvent, 'buttons', {
+            objectStatic.defineProperty(pointEvent, 'buttons', {
                 get: () => args.buttons
             });
 
@@ -342,14 +343,14 @@ export default class EventSimulator {
             args.button, args.relatedTarget);
 
         if (browserUtils.isFirefox || browserUtils.isIE) {
-            Object.defineProperty(ev, 'buttons', {
+            objectStatic.defineProperty(ev, 'buttons', {
                 get: () => args.buttons
             });
         }
 
         // NOTE: T188166 (act.hover triggers the mouseenter event with the "which" parameter set to 1).
         if (typeof args.which !== 'undefined' && browserUtils.isWebKit) {
-            Object.defineProperty(ev, INTERNAL_PROPS.whichPropertyWrapper, {
+            objectStatic.defineProperty(ev, INTERNAL_PROPS.whichPropertyWrapper, {
                 get: () => args.which
             });
         }
@@ -360,11 +361,11 @@ export default class EventSimulator {
             var currentDocument = domUtils.findDocument(el);
             var documentScroll  = getElementScroll(currentDocument);
 
-            Object.defineProperty(ev, 'pageX', {
+            objectStatic.defineProperty(ev, 'pageX', {
                 get: () => ev.clientX + documentScroll.left
             });
 
-            Object.defineProperty(ev, 'pageY', {
+            objectStatic.defineProperty(ev, 'pageY', {
                 get: () => ev.clientY + documentScroll.top
             });
         }
@@ -409,7 +410,7 @@ export default class EventSimulator {
 
                 var returnValue    = true;
                 var curWindowEvent = null; // NOTE: B254199
-                var onEvent       = 'on' + (MSPOINTER_EVENT_NAME_RE.test(ev.type) ? ev.type.toLowerCase() : ev.type);
+                var onEvent       = 'on' + (regExpProto.test(MSPOINTER_EVENT_NAME_RE, ev.type) ? stringProto.toLowerCase(ev.type) : ev.type);
                 var inlineHandler = el[onEvent];
                 var button        = args.button;
 
@@ -417,14 +418,14 @@ export default class EventSimulator {
                 if (typeof curWindow.event === 'object' && this.savedWindowEvents.length &&
                     curWindow.event !== this.savedWindowEvents[0]) {
                     this.savedNativeClickCount++;
-                    this.savedWindowEvents.unshift(curWindow.event);
+                    arrayProto.unshift(this.savedWindowEvents, curWindow.event);
                 }
 
                 delete curWindow.event;
 
                 var saveWindowEventObject = e => {
                     curWindowEvent = curWindow.event || ev;
-                    this.savedWindowEvents.unshift(curWindowEvent);
+                    arrayProto.unshift(this.savedWindowEvents, curWindowEvent);
                     eventUtils.preventDefault(e);
                 };
 
@@ -433,13 +434,13 @@ export default class EventSimulator {
                     el[onEvent] = saveWindowEventObject;
                     args.button = IE_BUTTONS_MAP[button];
 
-                    nativeMethods.fireEvent.call(el, onEvent, extend(domUtils.findDocument(el).createEventObject(), args));
+                    functionProto.call(nativeMethods.fireEvent, el, onEvent, extend(domUtils.findDocument(el).createEventObject(), args));
 
                     el[onEvent] = inlineHandler;
                     args.button = button;
                 }
 
-                Object.defineProperty(curWindow, 'event', {
+                objectStatic.defineProperty(curWindow, 'event', {
                     get:          () => this.savedWindowEvents[0],
                     configurable: true
                 });
@@ -447,7 +448,7 @@ export default class EventSimulator {
                 var cancelBubble = false;
 
                 if (curWindowEvent) {
-                    Object.defineProperty(curWindowEvent, 'returnValue', {
+                    objectStatic.defineProperty(curWindowEvent, 'returnValue', {
                         get: () => returnValue,
                         set: value => {
                             if (value === false)
@@ -459,18 +460,18 @@ export default class EventSimulator {
                         configurable: true
                     });
 
-                    Object.defineProperty(curWindowEvent, 'cancelBubble', {
+                    objectStatic.defineProperty(curWindowEvent, 'cancelBubble', {
                         get:          () => cancelBubble,
                         set:          value => ev.cancelBubble = cancelBubble = value,
                         configurable: true
                     });
 
                     if (curWindowEvent.type === 'mouseout' || curWindowEvent.type === 'mouseover') {
-                        Object.defineProperty(curWindowEvent, 'fromElement', {
+                        objectStatic.defineProperty(curWindowEvent, 'fromElement', {
                             get:          () => curWindowEvent.type === 'mouseout' ? el : args.relatedTarget,
                             configurable: true
                         });
-                        Object.defineProperty(curWindowEvent, 'toElement', {
+                        objectStatic.defineProperty(curWindowEvent, 'toElement', {
                             get:          () => curWindowEvent.type === 'mouseover' ? el : args.relatedTarget,
                             configurable: true
                         });
@@ -480,7 +481,7 @@ export default class EventSimulator {
                 returnValue = el.dispatchEvent(ev) && returnValue;
 
                 if (curWindowEvent && curWindowEvent === this.savedWindowEvents[0])
-                    this.savedWindowEvents.shift();
+                    arrayProto.shift(this.savedWindowEvents);
 
                 if (!this.savedWindowEvents.length)
                     delete curWindow.event;
@@ -491,7 +492,7 @@ export default class EventSimulator {
             // NOTE: In IE11, iframe's window.event object is null. We need to set
             // iframe's window.event object manually by using window.event (B254199).
             if (browserUtils.version === 11 && isElementInIframe) {
-                Object.defineProperty(domUtils.getIframeByElement(el).contentWindow, 'event', {
+                objectStatic.defineProperty(domUtils.getIframeByElement(el).contentWindow, 'event', {
                     get:          () => window.event,
                     configurable: true
                 });

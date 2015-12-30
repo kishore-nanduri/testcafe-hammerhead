@@ -8,6 +8,7 @@ import nativeMethods from '../native-methods';
 import * as domUtils from '../../utils/dom';
 import { isIE, version as browserVersion } from '../../utils/browser';
 import { preventDefault, DOM_EVENTS } from '../../utils/event';
+import { stringProto, regExpProto, functionProto, arrayProto } from '../../../protos';
 
 const ELEMENT_HAS_ADDITIONAL_EVENT_METHODS = isIE && browserVersion < 11;
 
@@ -45,7 +46,7 @@ export default class EventSandbox extends SandboxBase {
             dispatchEvent: function (ev) {
                 Listeners.beforeDispatchEvent();
 
-                var res = nativeMethods.dispatchEvent.call(this, ev);
+                var res = functionProto.call(nativeMethods.dispatchEvent, this, ev);
 
                 Listeners.afterDispatchEvent();
 
@@ -53,7 +54,7 @@ export default class EventSandbox extends SandboxBase {
             },
 
             fireEvent: function (eventName, ev) {
-                var eventType = eventName.substring(0, 2) === 'on' ? eventName.substring(2) : eventName;
+                var eventType = stringProto.substring(eventName, 0, 2) === 'on' ? stringProto.substring(eventName, 2) : eventName;
                 var createEventType;
                 var res;
 
@@ -61,11 +62,11 @@ export default class EventSandbox extends SandboxBase {
 
                 // NOTE: Event is 'MSEventObj'.
                 if (!ev || !ev.target) {
-                    if (/(^mouse\w+$)|^(dbl)?click$|^contextmenu$/.test(eventType))
+                    if (regExpProto.test(/(^mouse\w+$)|^(dbl)?click$|^contextmenu$/, eventType))
                         createEventType = 'MouseEvents';
-                    else if (/^key\w+$/.test(eventType))
+                    else if (regExpProto.test(/^key\w+$/, eventType))
                         createEventType = 'Events';
-                    else if (/^touch\w+$/.test(eventType))
+                    else if (regExpProto.test(/^touch\w+$/, eventType))
                         createEventType = 'TouchEvent';
                     else
                         createEventType = 'Events';
@@ -81,18 +82,18 @@ export default class EventSandbox extends SandboxBase {
                     }
                 }
 
-                res = nativeMethods.dispatchEvent.call(this, ev);
+                res = functionProto.call(nativeMethods.dispatchEvent, this, ev);
                 Listeners.afterDispatchEvent();
 
                 return res;
             },
 
             attachEvent: function (eventName, handler) {
-                nativeMethods.addEventListener.call(this, eventName.substring(2), handler);
+                functionProto.call(nativeMethods.addEventListener, this, stringProto.substring(eventName, 2), handler);
             },
 
             detachEvent: function (eventName, handler) {
-                nativeMethods.removeEventListener.call(this, eventName.substring(2), handler);
+                functionProto.call(nativeMethods.removeEventListener, this, stringProto.substring(eventName, 2), handler);
             },
 
             click: function () {
@@ -109,11 +110,11 @@ export default class EventSandbox extends SandboxBase {
             },
 
             setSelectionRange: function () {
-                return selection.setSelectionRangeWrapper.apply(this, arguments);
+                return functionProto.apply(selection.setSelectionRangeWrapper, this, arguments);
             },
 
             select: function () {
-                return selection.selectWrapper.call(this);
+                return functionProto.call(selection.selectWrapper, this);
             },
 
             focus: function () {
@@ -182,7 +183,7 @@ export default class EventSandbox extends SandboxBase {
 
         this.initDocumentListening();
 
-        this.listeners.initElementListening(window, DOM_EVENTS.concat(['beforeunload', 'unload', 'message']));
+        this.listeners.initElementListening(window, arrayProto.concat(DOM_EVENTS, ['beforeunload', 'unload', 'message']));
 
         this.listeners.addInternalEventListener(window, ['focus'], this.onFocus);
         this.listeners.addInternalEventListener(window, ['focus', 'blur', 'change'], this.cancelInternalEvents);
@@ -219,7 +220,7 @@ export default class EventSandbox extends SandboxBase {
         if (domUtils.isInputElement(el)) {
             if (isIE) {
                 // NOTE: Prevent the browser's open file dialog.
-                nativeMethods.addEventListener.call(el, 'click', e => {
+                functionProto.call(nativeMethods.addEventListener, el, 'click', e => {
                     if (domUtils.isFileInput(el)) {
                         if (this.eventSimulator.getClickedFileInput() === el) {
                             this.eventSimulator.setClickedFileInput(null);

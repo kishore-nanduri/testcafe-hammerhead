@@ -6,6 +6,7 @@
 import { createStringLiteral } from '../node-builder';
 import INTERNAL_LITERAL from '../internal-literal';
 import { Syntax } from '../tools/esotope';
+import { arrayProto } from '../../../protos';
 
 function isDocumentWriteStmt (stmt) {
     return stmt.type === Syntax.ExpressionStatement &&
@@ -20,7 +21,7 @@ function getDocumentWriteStmtIndices (stmts) {
 
     for (var i = 0; i < stmts.length; i++) {
         if (isDocumentWriteStmt(stmts[i]))
-            indices.push(i);
+            arrayProto.push(indices, i);
     }
 
     return indices;
@@ -46,8 +47,8 @@ export default {
         var firstExpr = node.body[indices[0]].expression;
         var lastExpr  = node.body[indices[indices.length - 1]].expression;
 
-        firstExpr.arguments.push(createStringLiteral(INTERNAL_LITERAL.documentWriteBegin));
-        lastExpr.arguments.push(createStringLiteral(INTERNAL_LITERAL.documentWriteEnd));
+        arrayProto.push(firstExpr.arguments, createStringLiteral(INTERNAL_LITERAL.documentWriteBegin));
+        arrayProto.push(lastExpr.arguments, createStringLiteral(INTERNAL_LITERAL.documentWriteEnd));
 
         return null;
     }

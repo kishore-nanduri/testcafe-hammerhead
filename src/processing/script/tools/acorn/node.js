@@ -1,5 +1,11 @@
+// -------------------------------------------------------------
+// WARNING: this file is used by both the client and the server.
+// Do not use any browser or node-specific API!
+// -------------------------------------------------------------
+
 import {Parser} from "./state"
 import {SourceLocation} from "./locutil"
+import { functionProto } from '../../../../protos';
 
 export class Node {
   constructor(parser, pos, loc) {
@@ -40,11 +46,11 @@ function finishNodeAt(node, type, pos, loc) {
 }
 
 pp.finishNode = function(node, type) {
-  return finishNodeAt.call(this, node, type, this.lastTokEnd, this.lastTokEndLoc)
+  return functionProto.call(finishNodeAt, this, node, type, this.lastTokEnd, this.lastTokEndLoc)
 }
 
 // Finish node at given position
 
 pp.finishNodeAt = function(node, type, pos, loc) {
-  return finishNodeAt.call(this, node, type, pos, loc)
+  return functionProto.call(finishNodeAt, this, node, type, pos, loc)
 }

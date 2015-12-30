@@ -1,5 +1,11 @@
+// -------------------------------------------------------------
+// WARNING: this file is used by both the client and the server.
+// Do not use any browser or node-specific API!
+// -------------------------------------------------------------
+
 import {has, isArray} from "./util"
 import {SourceLocation} from "./locutil"
+import { arrayProto } from '../../../../protos';
 
 // A second optional argument can be given to further configure
 // the parser process. These options are recognized:
@@ -95,7 +101,7 @@ export function getOptions(opts) {
 
   if (isArray(options.onToken)) {
     let tokens = options.onToken
-    options.onToken = (token) => tokens.push(token)
+    options.onToken = (token) => arrayProto.push(tokens, token)
   }
   if (isArray(options.onComment))
     options.onComment = pushComment(options, options.onComment)
@@ -115,7 +121,7 @@ function pushComment(options, array) {
       comment.loc = new SourceLocation(this, startLoc, endLoc)
     if (options.ranges)
       comment.range = [start, end]
-    array.push(comment)
+    arrayProto.push(array, comment)
   }
 }
 

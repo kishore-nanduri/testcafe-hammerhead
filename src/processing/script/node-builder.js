@@ -6,6 +6,7 @@
 import { Syntax } from './tools/esotope';
 import INTERNAL_LITERAL from './internal-literal';
 import INSTRUCTION from './instruction';
+import { arrayProto } from '../../protos';
 
 export function createStringLiteral (value) {
     return {
@@ -64,7 +65,7 @@ export function createProcessScriptMethCall (arg, isApply) {
     };
 
     if (isApply) {
-        ast.arguments.push({
+        arrayProto.push(ast.arguments, {
             type:  Syntax.Literal,
             value: true,
             raw:   'true'

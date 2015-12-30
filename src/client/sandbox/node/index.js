@@ -4,6 +4,7 @@ import WindowSandbox from './window';
 import DocumentSandbox from './document';
 import ElementSandbox from './element';
 import { parseDocumentCharset } from '../../utils/dom';
+import { functionProto } from '../../../protos';
 
 export default class NodeSandbox extends SandboxBase {
     constructor (nodeMutation, iframeSandbox, eventSandbox, uploadSandbox, shadowUI) {
@@ -90,7 +91,7 @@ export default class NodeSandbox extends SandboxBase {
             this.doc.attach(e.iframe.contentWindow, e.iframe.contentDocument);
         });
 
-        window[INTERNAL_PROPS.overrideDomMethodName] = this.overrideDomMethods.bind(this);
+        window[INTERNAL_PROPS.overrideDomMethodName] = functionProto.bind(this.overrideDomMethods, this);
 
         // NOTE: In some browsers (for example Firefox), the 'window.document' object is different when iframe is
         // created and when the document’s ready event is raised. Therefore, we need to update the 'document' object

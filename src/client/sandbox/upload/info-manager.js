@@ -8,6 +8,7 @@ import * as Browser from '../../utils/browser';
 import * as HiddenInfo from './hidden-info';
 import SHADOW_UI_CLASSNAME from '../../../shadow-ui/class-name';
 import Promise from 'pinkie';
+import { arrayProto, stringProto, functionProto } from '../../../protos';
 
 // NOTE: https://html.spec.whatwg.org/multipage/forms.html#fakepath-srsly.
 const FAKE_PATH_STRING = 'C:\\fakepath\\';
@@ -24,19 +25,19 @@ export default class UploadInfoManager {
         var data = [];
 
         for (var i = 0; i < fileList.length; i++)
-            data.push(fileList[i].base64);
+            arrayProto.push(data, fileList[i].base64);
 
         return data;
     }
 
     static _getUploadIframeForIE9 () {
-        var uploadIframe = nativeMethods.querySelector.call(document, '#' + UPLOAD_IFRAME_FOR_IE9_ID);
+        var uploadIframe = functionProto.call(nativeMethods.querySelector, document, '#' + UPLOAD_IFRAME_FOR_IE9_ID);
 
         if (!uploadIframe) {
-            uploadIframe               = nativeMethods.createElement.call(document, 'iframe');
+            uploadIframe               = functionProto.call(nativeMethods.createElement, document, 'iframe');
 
-            nativeMethods.setAttribute.call(uploadIframe, 'id', UPLOAD_IFRAME_FOR_IE9_ID);
-            nativeMethods.setAttribute.call(uploadIframe, 'name', UPLOAD_IFRAME_FOR_IE9_ID);
+            functionProto.call(nativeMethods.setAttribute, uploadIframe, 'id', UPLOAD_IFRAME_FOR_IE9_ID);
+            functionProto.call(nativeMethods.setAttribute, uploadIframe, 'name', UPLOAD_IFRAME_FOR_IE9_ID);
             uploadIframe.style.display = 'none';
 
             this.shadowUI.getRoot().appendChild(uploadIframe);
@@ -87,17 +88,17 @@ export default class UploadInfoManager {
 
         if (fileNames && fileNames.length) {
             if (Browser.isWebKit)
-                value = FAKE_PATH_STRING + fileNames[0].split('/').pop();
+                value = FAKE_PATH_STRING + arrayProto.pop(stringProto.split(fileNames[0], '/'));
             else if (Browser.isIE9 || Browser.isIE10) {
                 var filePaths = [];
 
                 for (var i = 0; i < fileNames.length; i++)
-                    filePaths.push(FAKE_PATH_STRING + fileNames[i].split('/').pop());
+                    arrayProto.push(filePaths, FAKE_PATH_STRING + arrayProto.pop(stringProto.split(fileNames[i], '/')));
 
-                value = filePaths.join(', ');
+                value = arrayProto.join(filePaths, ', ');
             }
             else
-                return fileNames[0].split('/').pop();
+                return arrayProto.pop(stringProto.split(fileNames[0], '/'));
         }
 
         return value;
@@ -108,10 +109,10 @@ export default class UploadInfoManager {
 
         if (fileList) {
             for (var i = 0; i < fileList.length; i++)
-                result.push(fileList[i].name);
+                arrayProto.push(result, fileList[i].name);
         }
-        else if (value.lastIndexOf('\\') !== -1)
-            result.push(value.substr(value.lastIndexOf('\\') + 1));
+        else if (stringProto.lastIndexOf(value, '\\') !== -1)
+            arrayProto.push(result, stringProto.substr(value, stringProto.lastIndexOf(value, '\\') + 1));
 
         return result;
     }
@@ -129,9 +130,9 @@ export default class UploadInfoManager {
 
         for (var i = 0; i < filesInfo.length; i++) {
             if (filesInfo[i].err)
-                errs.push(filesInfo[i]);
+                arrayProto.push(errs, filesInfo[i]);
             else
-                validFilesInfo.push(filesInfo[i]);
+                arrayProto.push(validFilesInfo, filesInfo[i]);
         }
 
         return {
@@ -194,9 +195,11 @@ export default class UploadInfoManager {
                 var readedFiles = [];
 
                 fileReader.addEventListener('load', e => {
-                    readedFiles.push({
-                        data: e.target.result.substr(e.target.result.indexOf(',') + 1),
+                    arrayProto.push(readedFiles, {
+                        data: stringProto.substr(e.target.result, stringProto.indexOf(e.target.result, ',') + 1),
+                        /* eslint-disable hammerhead/proto-methods */
                         blob: file.slice(0, file.size),
+                        /* eslint-enable hammerhead/proto-methods */
                         info: {
                             type:             file.type,
                             name:             file.name,
@@ -222,7 +225,7 @@ export default class UploadInfoManager {
 
         if (!inputInfo) {
             inputInfo = { input: input };
-            this.uploadInfo.push(inputInfo);
+            arrayProto.push(this.uploadInfo, inputInfo);
         }
 
         inputInfo.files = fileList;

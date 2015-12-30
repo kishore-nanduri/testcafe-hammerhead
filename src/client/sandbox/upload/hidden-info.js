@@ -1,4 +1,5 @@
 import INTERNAL_ATTRS from '../../../processing/dom/internal-attributes';
+import { arrayProto } from '../../../protos';
 
 function createInput (form) {
     var hiddenInput = document.createElement('input');
@@ -16,7 +17,7 @@ function getInput (form) {
     return form.querySelector('[name="' + INTERNAL_ATTRS.uploadInfoHiddenInputName + '"]') || createInput(form);
 }
 
-function indexOf (info, input) {
+function getInputIndex (info, input) {
     for (var index = 0; index < info.length; index++) {
         if (info[index].id === input.id || info[index].name === input.name)
             return index;
@@ -31,15 +32,15 @@ export function addInputInfo (input, fileList, value) {
     if (formInfo) {
         var files = [];
 
-        Array.prototype.slice.call(fileList).forEach(file => {
-            files.push({
+        arrayProto.forEach(arrayProto.slice(fileList), file => {
+            arrayProto.push(files, {
                 name: file.name,
                 type: file.type,
                 data: file.base64
             });
         });
 
-        var inputInfoIndex = indexOf(formInfo, input);
+        var inputInfoIndex = getInputIndex(formInfo, input);
         var inputInfo      = {
             id:    input.id,
             name:  input.name,
@@ -48,7 +49,7 @@ export function addInputInfo (input, fileList, value) {
         };
 
         if (inputInfoIndex === -1)
-            formInfo.push(inputInfo);
+            arrayProto.push(formInfo, inputInfo);
         else
             formInfo[inputInfoIndex] = inputInfo;
 
@@ -72,10 +73,10 @@ export function removeInputInfo (input) {
     var uploadInfo = getFormInfo(input);
 
     if (uploadInfo) {
-        var inputInfoIndex = indexOf(uploadInfo, input);
+        var inputInfoIndex = getInputIndex(uploadInfo, input);
 
         if (inputInfoIndex !== -1) {
-            uploadInfo.splice(inputInfoIndex, 1);
+            arrayProto.splice(uploadInfo, inputInfoIndex, 1);
             setFormInfo(input, uploadInfo);
 
             return true;

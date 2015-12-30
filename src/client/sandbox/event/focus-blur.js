@@ -5,6 +5,7 @@ import nativeMethods from '../native-methods';
 import * as browserUtils from '../../utils/browser';
 import * as domUtils from '../../utils/dom';
 import * as styleUtils from '../../utils/style';
+import { functionProto, arrayProto, stringProto } from '../../../protos';
 
 const INTERNAL_FOCUS_FLAG = 'hammerhead|internal-focus';
 const INTERNAL_BLUR_FLAG  = 'hammerhead|internal-blur';
@@ -51,14 +52,14 @@ export default class FocusBlurSandbox extends SandboxBase {
             return;
 
         if (this.lastFocusedElement &&
-            nativeMethods.getAttribute.call(this.lastFocusedElement, INTERNAL_ATTRS.focusPseudoClass))
-            nativeMethods.removeAttribute.call(this.lastFocusedElement, INTERNAL_ATTRS.focusPseudoClass);
+            functionProto.call(nativeMethods.getAttribute, this.lastFocusedElement, INTERNAL_ATTRS.focusPseudoClass))
+            functionProto.call(nativeMethods.removeAttribute, this.lastFocusedElement, INTERNAL_ATTRS.focusPseudoClass);
 
         if (domUtils.isElementFocusable(activeElement) &&
             !(domUtils.isBodyElement(activeElement) &&
             activeElement.getAttribute('tabIndex') === null)) {
             this.lastFocusedElement = activeElement;
-            nativeMethods.setAttribute.call(activeElement, INTERNAL_ATTRS.focusPseudoClass, true);
+            functionProto.call(nativeMethods.setAttribute, activeElement, INTERNAL_ATTRS.focusPseudoClass, true);
         }
         else
             this.lastFocusedElement = null;
@@ -114,15 +115,15 @@ export default class FocusBlurSandbox extends SandboxBase {
 
                 for (var i = 0; i < elementParents.length; i++) {
                     if (styleUtils.get(elementParents[i], 'overflow') === 'hidden') {
-                        nonScrollableParents.push(elementParents[i]);
-                        nonScrollableParentsScrollValues.push(styleUtils.getElementScroll(elementParents[i]));
+                        arrayProto.push(nonScrollableParents, elementParents[i]);
+                        arrayProto.push(nonScrollableParentsScrollValues, styleUtils.getElementScroll(elementParents[i]));
                     }
                 }
             }
 
             var tempElement = null;
 
-            if (type === 'focus' && el.tagName && el.tagName.toLowerCase() === 'label' &&
+            if (type === 'focus' && el.tagName && stringProto.toLowerCase(el.tagName) === 'label' &&
                 el.htmlFor) {
                 tempElement = domUtils.findDocument(el).getElementById(el.htmlFor);
                 if (tempElement)
@@ -135,13 +136,13 @@ export default class FocusBlurSandbox extends SandboxBase {
 
             el[FocusBlurSandbox.getInternalEventFlag(type)] = true;
 
-            FocusBlurSandbox._getNativeMeth(el, type).call(el);
+            functionProto.call(FocusBlurSandbox._getNativeMeth(el, type), el);
 
             if (preventScrolling)
                 FocusBlurSandbox._restoreElementScroll(this.window, windowScroll);
 
             if (browserUtils.isIE && nonScrollableParents.length) {
-                nonScrollableParents.forEach((parent, index) => {
+                arrayProto.forEach(nonScrollableParents, (parent, index) => {
                     FocusBlurSandbox._restoreElementScroll(parent, nonScrollableParentsScrollValues[index]);
                 });
             }
@@ -266,10 +267,10 @@ export default class FocusBlurSandbox extends SandboxBase {
                     // NOTE: The Blur event is raised for the body only in IE. In addition, we must not call the
                     // blur function for the body because this moves the browser window into the background.
                     if (!silent && browserUtils.isIE) {
-                        var simulateBodyBlur = this.eventSimulator.blur.bind(this.eventSimulator, activeElement);
+                        var simulateBodyBlur = functionProto.bind(this.eventSimulator.blur, this.eventSimulator, activeElement);
 
                         if (isAsync)
-                            this.timersSandbox.setTimeout.call(this.window, simulateBodyBlur, 0);
+                            functionProto.call(this.timersSandbox.setTimeout, this.window, simulateBodyBlur, 0);
                         else
                             simulateBodyBlur();
                     }

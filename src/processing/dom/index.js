@@ -7,6 +7,7 @@ import SHADOW_UI_CLASSNAME from '../../shadow-ui/class-name';
 import { isScriptProcessed, processScript } from '../script';
 import styleProcessor from '../../processing/style';
 import * as urlUtils from '../../utils/url';
+import { stringProto, regExpProto, arrayProto, functionProto } from '../../protos';
 
 const CDATA_REG_EX = /^(\s)*\/\/<!\[CDATA\[([\s\S]*)\/\/\]\]>(\s)*$/;
 // NOTE: Ignore '//:0/' url (http://www.myntra.com/).
@@ -56,54 +57,54 @@ export default class DomProcessor {
     _createProcessorPatterns (adapter) {
         var selectors = {
             HAS_HREF_ATTR: el => {
-                var tagName = adapter.getTagName(el).toLowerCase();
+                var tagName = stringProto.toLowerCase(adapter.getTagName(el));
 
-                return URL_ATTR_TAGS.href.indexOf(tagName) !== -1;
+                return arrayProto.indexOf(URL_ATTR_TAGS.href, tagName) !== -1;
             },
 
             HAS_SRC_ATTR: el => {
-                var tagName = adapter.getTagName(el).toLowerCase();
+                var tagName = stringProto.toLowerCase(adapter.getTagName(el));
 
-                return URL_ATTR_TAGS.src.indexOf(tagName) !== -1;
+                return arrayProto.indexOf(URL_ATTR_TAGS.src, tagName) !== -1;
             },
 
             HAS_ACTION_ATTR: el => {
-                var tagName = adapter.getTagName(el).toLowerCase();
+                var tagName = stringProto.toLowerCase(adapter.getTagName(el));
 
-                return URL_ATTR_TAGS.action.indexOf(tagName) !== -1;
+                return arrayProto.indexOf(URL_ATTR_TAGS.action, tagName) !== -1;
             },
 
             HAS_MANIFEST_ATTR: el => {
-                var tagName = adapter.getTagName(el).toLowerCase();
+                var tagName = stringProto.toLowerCase(adapter.getTagName(el));
 
-                return URL_ATTR_TAGS.manifest.indexOf(tagName) !== -1;
+                return arrayProto.indexOf(URL_ATTR_TAGS.manifest, tagName) !== -1;
             },
 
             HAS_DATA_ATTR: el => {
-                var tagName = adapter.getTagName(el).toLowerCase();
+                var tagName = stringProto.toLowerCase(adapter.getTagName(el));
 
-                return URL_ATTR_TAGS.data.indexOf(tagName) !== -1;
+                return arrayProto.indexOf(URL_ATTR_TAGS.data, tagName) !== -1;
             },
 
             HTTP_EQUIV_META: el => {
-                var tagName = adapter.getTagName(el).toLowerCase();
+                var tagName = stringProto.toLowerCase(adapter.getTagName(el));
 
                 return tagName === 'meta' && adapter.hasAttr(el, 'http-equiv');
             },
 
             ALL: () => true,
 
-            IS_SCRIPT: el => adapter.getTagName(el).toLowerCase() === 'script',
+            IS_SCRIPT: el => stringProto.toLowerCase(adapter.getTagName(el)) === 'script',
 
-            IS_LINK: el => adapter.getTagName(el).toLowerCase() === 'link',
+            IS_LINK: el => stringProto.toLowerCase(adapter.getTagName(el)) === 'link',
 
-            IS_INPUT: el => adapter.getTagName(el).toLowerCase() === 'input',
+            IS_INPUT: el => stringProto.toLowerCase(adapter.getTagName(el)) === 'input',
 
-            IS_STYLE: el => adapter.getTagName(el).toLowerCase() === 'style',
+            IS_STYLE: el => stringProto.toLowerCase(adapter.getTagName(el)) === 'style',
 
             HAS_EVENT_HANDLER: el => adapter.hasEventHandler(el),
 
-            IS_SANDBOXED_IFRAME: el => adapter.getTagName(el).toLowerCase() === 'iframe' &&
+            IS_SANDBOXED_IFRAME: el => stringProto.toLowerCase(adapter.getTagName(el)) === 'iframe' &&
                                        adapter.hasAttr(el, 'sandbox')
         };
 
@@ -169,7 +170,7 @@ export default class DomProcessor {
 
             if (pattern.selector(elementForSelectorCheck) && !this._isShadowElement(el)) {
                 for (var j = 0; j < pattern.elementProcessors.length; j++)
-                    pattern.elementProcessors[j].call(this, el, urlReplacer, pattern);
+                    functionProto.call(pattern.elementProcessors[j], this, el, urlReplacer, pattern);
                 el[ELEMENT_PROCESSED] = true;
             }
         }
@@ -181,11 +182,11 @@ export default class DomProcessor {
     }
 
     isOpenLinkInIframe (el) {
-        var tagName = this.adapter.getTagName(el).toLowerCase();
+        var tagName = stringProto.toLowerCase(this.adapter.getTagName(el));
         var target  = this.adapter.getAttr(el, 'target');
 
         if (target !== '_top') {
-            var mustProcessTag = this.adapter.IFRAME_FLAG_TAGS.indexOf(tagName) !== -1;
+            var mustProcessTag = arrayProto.indexOf(this.adapter.IFRAME_FLAG_TAGS, tagName) !== -1;
             var isNameTarget   = target ? target[0] !== '_' : false;
 
             if (target === '_parent')
@@ -201,7 +202,7 @@ export default class DomProcessor {
     _isShadowElement (el) {
         var className = this.adapter.getClassName(el);
 
-        return typeof className === 'string' && className.indexOf(SHADOW_UI_CLASSNAME.postfix) > -1;
+        return typeof className === 'string' && stringProto.indexOf(className, SHADOW_UI_CLASSNAME.postfix) > -1;
     }
 
     // Element processors
@@ -228,8 +229,8 @@ export default class DomProcessor {
         var processed     = this.adapter.hasAttr(el, storedUrlAttr);
         var attrValue     = this.adapter.getAttr(el, processed ? storedUrlAttr : attr);
 
-        var code    = jsProtocol ? attrValue.replace(JAVASCRIPT_PROTOCOL_REG_EX, '') : attrValue;
-        var matches = code.match(HTML_STRING_REG_EX);
+        var code    = jsProtocol ? stringProto.replace(attrValue, JAVASCRIPT_PROTOCOL_REG_EX, '') : attrValue;
+        var matches = stringProto.match(code, HTML_STRING_REG_EX);
 
         var domProc = this;
 
@@ -247,7 +248,7 @@ export default class DomProcessor {
 
             this.emit(this.HTML_PROCESSING_REQUIRED_EVENT, html, processedHTML => {
                 /*eslint-disable no-script-url*/
-                var processedAttrValue = 'javascript:\'' + processedHTML.replace(/'/g, "\\'") + '\'';
+                var processedAttrValue = 'javascript:\'' + stringProto.replace(processedHTML, /'/g, "\\'") + '\'';
 
                 /*eslint-enable no-script-url*/
                 setAttributes(html, processedHTML, processedAttrValue);
@@ -274,17 +275,17 @@ export default class DomProcessor {
             var attrValue = this.adapter.getAttr(el, events[i]);
 
             if (attrValue)
-                this._processJsAttr(el, events[i], JAVASCRIPT_PROTOCOL_REG_EX.test(attrValue));
+                this._processJsAttr(el, events[i], regExpProto.test(JAVASCRIPT_PROTOCOL_REG_EX, attrValue));
         }
     }
 
     _processMetaElement (el, urlReplacer, pattern) {
-        var httpEquivAttrValue = this.adapter.getAttr(el, 'http-equiv').toLowerCase();
+        var httpEquivAttrValue = stringProto.toLowerCase(this.adapter.getAttr(el, 'http-equiv'));
 
         if (httpEquivAttrValue === 'refresh') {
             var attr = this.adapter.getAttr(el, pattern.urlAttr);
 
-            attr = attr.replace(/(url=)(.*)$/i, (match, prefix, url) => prefix + urlReplacer(url));
+            attr = stringProto.replace(attr, /(url=)(.*)$/i, (match, prefix, url) => prefix + urlReplacer(url));
 
             this.adapter.setAttr(el, pattern.urlAttr, attr);
         }
@@ -298,7 +299,7 @@ export default class DomProcessor {
     _processSandboxedIframe (el) {
         var attrValue = this.adapter.getAttr(el, 'sandbox');
 
-        if (attrValue.indexOf('allow-scripts') === -1) {
+        if (stringProto.indexOf(attrValue, 'allow-scripts') === -1) {
             var storedAttr = this.getStoredAttrName('sandbox');
 
             this.adapter.setAttr(el, storedAttr, attrValue);
@@ -322,30 +323,30 @@ export default class DomProcessor {
         // html5 specification). If the type is not set, it is considered 'text/javascript' by default.
         var scriptType                 = this.adapter.getAttr(script, 'type');
         var executableScriptTypesRegEx = /(application\/((x-)?ecma|(x-)?java)script)|(text\/)(javascript(1\.{0-5})?|((x-)?ecma|x-java|js|live)script)/;
-        var isExecutableScript         = !scriptType || executableScriptTypesRegEx.test(scriptType);
+        var isExecutableScript         = !scriptType || regExpProto.test(executableScriptTypesRegEx, scriptType);
 
         if (isExecutableScript) {
             var result              = scriptContent;
             var commentPrefix       = '';
-            var commentPrefixMatch  = result.match(HTML_COMMENT_PREFIX_REG_EX);
+            var commentPrefixMatch  = stringProto.match(result, HTML_COMMENT_PREFIX_REG_EX);
             var commentPostfix      = '';
             var commentPostfixMatch = null;
-            var hasCDATA            = CDATA_REG_EX.test(result);
+            var hasCDATA            = regExpProto.test(CDATA_REG_EX, result);
 
             if (commentPrefixMatch) {
                 commentPrefix       = commentPrefixMatch[0];
-                commentPostfixMatch = result.match(HTML_COMMENT_POSTFIX_REG_EX);
+                commentPostfixMatch = stringProto.match(result, HTML_COMMENT_POSTFIX_REG_EX);
 
                 if (commentPostfixMatch)
                     commentPostfix = commentPostfixMatch[0];
-                else if (!HTML_COMMENT_SIMPLE_POSTFIX_REG_EX.test(commentPrefix))
+                else if (!regExpProto.test(HTML_COMMENT_SIMPLE_POSTFIX_REG_EX, commentPrefix))
                     commentPostfix = '//-->';
 
-                result = result.replace(commentPrefix, '').replace(commentPostfix, '');
+                result = stringProto.replace(stringProto.replace(result, commentPrefix, ''), commentPostfix, '');
             }
 
             if (hasCDATA)
-                result = result.replace(CDATA_REG_EX, '$2');
+                result = stringProto.replace(result, CDATA_REG_EX, '$2');
 
             result = commentPrefix + processScript(result, true, false) + commentPostfix;
 
@@ -378,7 +379,7 @@ export default class DomProcessor {
         var attrValue = this.adapter.getAttr(el, 'target');
 
         // NOTE: Value may have whitespace.
-        attrValue = attrValue && attrValue.replace(/\s/g, '');
+        attrValue = attrValue && stringProto.replace(attrValue, /\s/g, '');
 
         if (attrValue === '_blank' || attrValue === 'blank')
             this.adapter.setAttr(el, 'target', '_self');
@@ -392,8 +393,8 @@ export default class DomProcessor {
 
             // NOTE: Page resource URL with proxy URL.
             if ((resourceUrl || resourceUrl === '') && !processedOnServer) {
-                if (urlUtils.isSupportedProtocol(resourceUrl) && !EMPTY_URL_REG_EX.test(resourceUrl)) {
-                    var elTagName    = this.adapter.getTagName(el).toLowerCase();
+                if (urlUtils.isSupportedProtocol(resourceUrl) && !regExpProto.test(EMPTY_URL_REG_EX, resourceUrl)) {
+                    var elTagName    = stringProto.toLowerCase(this.adapter.getTagName(el));
                     var isIframe     = elTagName === 'iframe';
                     var isScript     = elTagName === 'script';
                     var resourceType = null;
@@ -448,7 +449,7 @@ export default class DomProcessor {
     }
 
     _processUrlJsAttr (el, urlReplacer, pattern) {
-        if (JAVASCRIPT_PROTOCOL_REG_EX.test(this.adapter.getAttr(el, pattern.urlAttr)))
+        if (regExpProto.test(JAVASCRIPT_PROTOCOL_REG_EX, this.adapter.getAttr(el, pattern.urlAttr)))
             this._processJsAttr(el, pattern.urlAttr, true);
     }
 }

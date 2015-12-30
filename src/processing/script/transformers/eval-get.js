@@ -6,6 +6,7 @@
 import INSTRUCTION from '../instruction';
 import { createGetEvalMethCall } from '../node-builder';
 import { Syntax } from '../tools/esotope';
+import { arrayProto } from '../../../protos';
 
 // Transform:
 // var foo = eval; foo = eval; { _eval: eval }; return eval;
@@ -29,7 +30,7 @@ export default {
 
             // Skip: function (eval) { ... } || function func(eval) { ... }
             if ((parent.type === Syntax.FunctionExpression || parent.type === Syntax.FunctionDeclaration) &&
-                parent.params.indexOf(node) !== -1)
+                arrayProto.indexOf(parent.params, node) !== -1)
                 return false;
 
             // Skip: { eval: value }

@@ -1,3 +1,8 @@
+// -------------------------------------------------------------
+// WARNING: this file is used by both the client and the server.
+// Do not use any browser or node-specific API!
+// -------------------------------------------------------------
+
 // This is a trick taken from Esprima. It turns out that, on
 // non-Chrome browsers, to check whether a string is in a set, a
 // predicate containing a big ugly `switch` statement is faster than
@@ -8,6 +13,7 @@
 // It starts by sorting the words by length.
 
 // Reserved word lists for various dialects of the language
+import { regExpProto } from '../../../../protos';
 
 export const reservedWords = {
   3: "abstract boolean byte char class double enum export extends final float goto implements import int interface long native package private protected public short static super synchronized throws transient volatile",
@@ -70,7 +76,7 @@ export function isIdentifierStart(code, astral) {
   if (code < 91) return true
   if (code < 97) return code === 95
   if (code < 123) return true
-  if (code <= 0xffff) return code >= 0xaa && nonASCIIidentifierStart.test(String.fromCharCode(code))
+  if (code <= 0xffff) return code >= 0xaa && regExpProto.test(nonASCIIidentifierStart, String.fromCharCode(code))
   if (astral === false) return false
   return isInAstralSet(code, astralIdentifierStartCodes)
 }
@@ -84,7 +90,7 @@ export function isIdentifierChar(code, astral) {
   if (code < 91) return true
   if (code < 97) return code === 95
   if (code < 123) return true
-  if (code <= 0xffff) return code >= 0xaa && nonASCIIidentifier.test(String.fromCharCode(code))
+  if (code <= 0xffff) return code >= 0xaa && regExpProto.test(nonASCIIidentifier, String.fromCharCode(code))
   if (astral === false) return false
   return isInAstralSet(code, astralIdentifierStartCodes) || isInAstralSet(code, astralIdentifierCodes)
 }

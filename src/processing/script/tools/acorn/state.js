@@ -1,13 +1,19 @@
+// -------------------------------------------------------------
+// WARNING: this file is used by both the client and the server.
+// Do not use any browser or node-specific API!
+// -------------------------------------------------------------
+
 import {reservedWords, keywords} from "./identifier"
 import {types as tt} from "./tokentype"
 import {lineBreak} from "./whitespace"
 import {getOptions} from "./options"
+import { stringProto, regExpProto } from '../../../../protos';
 
 // Registered plugins
 export const plugins = {}
 
 function keywordRegexp(words) {
-  return new RegExp("^(" + words.replace(/ /g, "|") + ")$")
+  return new RegExp("^(" + stringProto.replace(words, / /g, "|") + ")$")
 }
 
 export class Parser {
@@ -36,8 +42,8 @@ export class Parser {
     // The current position of the tokenizer in the input.
     if (startPos) {
       this.pos = startPos
-      this.lineStart = Math.max(0, this.input.lastIndexOf("\n", startPos))
-      this.curLine = this.input.slice(0, this.lineStart).split(lineBreak).length
+      this.lineStart = Math.max(0, stringProto.lastIndexOf(this.input, "\n", startPos))
+      this.curLine = stringProto.split(stringProto.slice(this.input, 0, this.lineStart), lineBreak).length
     } else {
       this.pos = this.lineStart = 0
       this.curLine = 1
@@ -76,13 +82,13 @@ export class Parser {
     this.labels = []
 
     // If enabled, skip leading hashbang line.
-    if (this.pos === 0 && options.allowHashBang && this.input.slice(0, 2) === '#!')
+    if (this.pos === 0 && options.allowHashBang && stringProto.slice(this.input, 0, 2) === '#!')
       this.skipLineComment(2)
   }
 
   // DEPRECATED Kept for backwards compatibility until 3.0 in case a plugin uses them
-  isKeyword(word) { return this.keywords.test(word) }
-  isReservedWord(word) { return this.reservedWords.test(word) }
+  isKeyword(word) { return regExpProto.test(this.keywords, word) }
+  isReservedWord(word) { return regExpProto.test(this.reservedWords, word) }
 
   extend(name, f) {
     this[name] = f(this[name])

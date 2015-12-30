@@ -1,5 +1,6 @@
 // NOTE: For internal usage of Listeners.
 import { isIE, version as browserVersion } from '../../utils/browser';
+import { stringProto, regExpProto, arrayProto } from '../../../protos';
 
 const ELEMENT_LISTENING_EVENTS_STORAGE_PROP = 'hammerhead|element-listening-events-storage-prop';
 
@@ -8,7 +9,8 @@ export function getElementCtx (el) {
 }
 
 export function getEventCtx (el, event) {
-    event = isIE && browserVersion > 10 && /MSPointer/.test(event) ? event.replace('MS', '').toLowerCase() : event;
+    event = isIE && browserVersion > 10 &&
+            regExpProto.test(/MSPointer/, event) ? stringProto.toLowerCase(stringProto.replace(event, 'MS', '')) : event;
 
     return getElementCtx(el)[event] || null;
 }
@@ -44,14 +46,14 @@ export function addFirstInternalHandler (el, events, handler) {
     var elementCtx = getElementCtx(el);
 
     for (var i = 0; i < events.length; i++)
-        elementCtx[events[i]].internalHandlers.unshift(handler);
+        arrayProto.unshift(elementCtx[events[i]].internalHandlers, handler);
 }
 
 export function addInternalHandler (el, events, handler) {
     var elementCtx = getElementCtx(el);
 
     for (var i = 0; i < events.length; i++)
-        elementCtx[events[i]].internalHandlers.push(handler);
+        arrayProto.push(elementCtx[events[i]].internalHandlers, handler);
 }
 
 export function removeInternalHandler (el, events, handler) {
@@ -59,19 +61,19 @@ export function removeInternalHandler (el, events, handler) {
 
     for (var i = 0; i < events.length; i++) {
         var internalHandlers = elementCtx[events[i]].internalHandlers;
-        var handlerIndex     = internalHandlers.indexOf(handler);
+        var handlerIndex     = arrayProto.indexOf(internalHandlers, handler);
 
         if (handlerIndex > -1)
-            internalHandlers.splice(handlerIndex, 1);
+            arrayProto.splice(internalHandlers, handlerIndex, 1);
     }
 }
 
 export function wrapEventListener (eventCtx, listener, wrapper, useCapture) {
-    eventCtx.outerHandlers.push({
+    arrayProto.push(eventCtx.outerHandlers, {
         fn:         listener,
         useCapture: useCapture || false
     });
-    eventCtx.wrappers.push(wrapper);
+    arrayProto.push(eventCtx.wrappers, wrapper);
 }
 
 export function getWrapper (eventCtx, listener, useCapture) {
@@ -85,8 +87,8 @@ export function getWrapper (eventCtx, listener, useCapture) {
         if (curListener.fn === listener && (curListener.useCapture || false) === (useCapture || false)) {
             wrapper = wrappers[i];
 
-            wrappers.splice(i, 1);
-            originListeners.splice(i, 1);
+            arrayProto.splice(wrappers, i, 1);
+            arrayProto.splice(originListeners, i, 1);
 
             return wrapper;
         }

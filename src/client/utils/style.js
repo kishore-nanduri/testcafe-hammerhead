@@ -1,6 +1,7 @@
 import * as domUtils from './dom';
 import * as browserUtils from './browser';
 import { styleClass } from '../sandbox/native-methods';
+import { stringProto, regExpProto } from '../../protos';
 
 // NOTE: For Chrome.
 const MIN_SELECT_SIZE_VALUE = 4;
@@ -8,7 +9,7 @@ const MIN_SELECT_SIZE_VALUE = 4;
 function getIntValue (value) {
     value = value || '';
 
-    var parsedValue = parseInt(value.replace('px', ''), 10);
+    var parsedValue = parseInt(stringProto.replace(value, 'px', ''), 10);
 
     return isNaN(parsedValue) ? 0 : parsedValue;
 }
@@ -74,7 +75,7 @@ export function getElementPadding (el) {
 }
 
 export function getElementScroll (el) {
-    var isHtmlElement = /html/i.test(el.tagName);
+    var isHtmlElement = regExpProto.test(/html/i, el.tagName);
     var currentWindow = window;
 
     if (isHtmlElement && domUtils.isElementInIframe(el)) {
@@ -224,9 +225,9 @@ export function getSelectElementSize (select) {
 
 export function isVisibleChild (el) {
     var select  = domUtils.getSelectParent(el);
-    var tagName = el.tagName.toLowerCase();
+    var tagName = stringProto.toLowerCase(el.tagName);
 
-    return select && select.tagName.toLowerCase() === 'select' && getSelectElementSize(select) > 1 &&
+    return select && stringProto.toLowerCase(select.tagName) === 'select' && getSelectElementSize(select) > 1 &&
            (tagName === 'option' || tagName === 'optgroup') &&
            // NOTE: Firefox does not display groups without a label or with an empty label.
            (!browserUtils.isFirefox || el.label);
@@ -290,7 +291,7 @@ export function getOffsetParent (el) {
     if (el) {
         var offsetParent = el.offsetParent || document.body;
 
-        while (offsetParent && (!/^(?:body|html)$/i.test(offsetParent.nodeName) &&
+        while (offsetParent && (!regExpProto.test(/^(?:body|html)$/i, offsetParent.nodeName) &&
                get(offsetParent, 'position') === 'static'))
             offsetParent = offsetParent.offsetParent;
 

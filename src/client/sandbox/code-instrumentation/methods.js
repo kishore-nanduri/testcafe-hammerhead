@@ -6,6 +6,7 @@ import INSTRUCTION from '../../../processing/script/instruction';
 import { shouldInstrumentMethod } from '../../../processing/script/instrumented';
 import { isWindow, isDocument, isDomElement } from '../../utils/dom';
 import { isIE } from '../../utils/browser';
+import { functionProto, arrayProto, stringProto } from '../../../protos';
 
 export default class MethodCallInstrumentation extends SandboxBase {
     constructor (messageSandbox) {
@@ -48,12 +49,12 @@ export default class MethodCallInstrumentation extends SandboxBase {
 
             write: {
                 condition: document => !isDocument(document),
-                method:    (document, args) => document.write.apply(document, MethodCallInstrumentation._removeOurWriteMethArgs(args))
+                method:    (document, args) => functionProto.apply(document.write, document, MethodCallInstrumentation._removeOurWriteMethArgs(args))
             },
 
             writeln: {
                 condition: document => !isDocument(document),
-                method:    (document, args) => document.writeln.apply(document, MethodCallInstrumentation._removeOurWriteMethArgs(args))
+                method:    (document, args) => functionProto.apply(document.writeln, document, MethodCallInstrumentation._removeOurWriteMethArgs(args))
             }
         };
     }
@@ -68,9 +69,9 @@ export default class MethodCallInstrumentation extends SandboxBase {
             var lastArg = args[args.length - 1];
 
             if (lastArg === INTERNAL_LITERAL.documentWriteBegin || lastArg === INTERNAL_LITERAL.documentWriteEnd) {
-                var result = Array.prototype.slice.call(args);
+                var result = arrayProto.slice(args);
 
-                result.pop();
+                arrayProto.pop(result);
 
                 return result;
             }
@@ -85,17 +86,17 @@ export default class MethodCallInstrumentation extends SandboxBase {
 
         switch (args.length) {
             case 1:
-                return meth.call(owner, args[0]);
+                return functionProto.call(meth, owner, args[0]);
             case 2:
-                return meth.call(owner, args[0], args[1]);
+                return functionProto.call(meth, owner, args[0], args[1]);
             case 3:
-                return meth.call(owner, args[0], args[1], args[2]);
+                return functionProto.call(meth, owner, args[0], args[1], args[2]);
             case 4:
-                return meth.call(owner, args[0], args[1], args[2], args[3]);
+                return functionProto.call(meth, owner, args[0], args[1], args[2], args[3]);
             case 5:
-                return meth.call(owner, args[0], args[1], args[2], args[3], args[4]);
+                return functionProto.call(meth, owner, args[0], args[1], args[2], args[3], args[4]);
             default:
-                return meth.apply(owner, args);
+                return functionProto.apply(meth, owner, args);
         }
     }
 
@@ -122,6 +123,6 @@ export default class MethodCallInstrumentation extends SandboxBase {
     }
 
     static _replaceFocusPseudoClass (selector) {
-        return selector.replace(/\s*:focus\b/gi, '[' + INTERNAL_ATTRS.focusPseudoClass + ']');
+        return stringProto.replace(selector, /\s*:focus\b/gi, '[' + INTERNAL_ATTRS.focusPseudoClass + ']');
     }
 }

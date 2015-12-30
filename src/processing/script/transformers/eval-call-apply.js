@@ -5,6 +5,7 @@
 
 import { createProcessScriptMethCall } from '../node-builder';
 import { Syntax } from '../tools/esotope';
+import { regExpProto } from '../../../protos';
 
 const INVOCATION_FUNC_NAME_RE = /^(call|apply)$/;
 
@@ -24,7 +25,7 @@ export default {
         if (node.arguments.length < 2)
             return false;
 
-        if (node.callee.type === Syntax.MemberExpression && INVOCATION_FUNC_NAME_RE.test(node.callee.property.name)) {
+        if (node.callee.type === Syntax.MemberExpression && regExpProto.test(INVOCATION_FUNC_NAME_RE, node.callee.property.name)) {
             var obj = node.callee.object;
 
             // obj.eval.<meth>(), obj[eval].<meth>(),

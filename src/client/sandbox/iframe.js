@@ -7,6 +7,7 @@ import { syncServiceMsg } from '../transport';
 import { isFirefox, isWebKit } from '../utils/browser';
 import { isSupportedProtocol } from '../utils/url';
 import { isIframeWithoutSrc } from '../utils/dom';
+import { functionProto } from '../../protos';
 
 const IFRAME_WINDOW_INITED = 'hammerhead|iframe-window-inited';
 
@@ -75,7 +76,7 @@ export default class IframeSandbox extends SandboxBase {
         };
 
         syncServiceMsg(msg, iframeTaskScript => {
-            e.iframe.contentWindow.eval.apply(e.iframe.contentWindow, [iframeTaskScript]);
+            functionProto.apply(e.iframe.contentWindow.eval, e.iframe.contentWindow, [iframeTaskScript]);
         });
     }
 
@@ -86,7 +87,7 @@ export default class IframeSandbox extends SandboxBase {
             this._raiseReadyToInitEvent(el);
 
             if (!isWebKit && el.contentDocument) {
-                this.nativeMethods.documentAddEventListener.call(el.contentDocument, 'DOMContentLoaded', () => {
+                functionProto.call(this.nativeMethods.documentAddEventListener, el.contentDocument, 'DOMContentLoaded', () => {
                     this._raiseReadyToInitEvent(el);
                 });
             }
@@ -101,7 +102,7 @@ export default class IframeSandbox extends SandboxBase {
         if (isShadowUIElement(el))
             return;
 
-        var src = this.nativeMethods.getAttribute.call(el, 'src');
+        var src = functionProto.call(this.nativeMethods.getAttribute, el, 'src');
 
         if (!src || !isSupportedProtocol(src)) {
             if (el.contentWindow) {
@@ -112,16 +113,16 @@ export default class IframeSandbox extends SandboxBase {
                         this._raiseReadyToInitEvent(el);
                 };
 
-                this.nativeMethods.addEventListener.call(el, 'load', readyHandler);
+                functionProto.call(this.nativeMethods.addEventListener, el, 'load', readyHandler);
 
                 if (isFirefox)
-                    this.nativeMethods.documentAddEventListener.call(el.contentDocument, 'ready', readyHandler);
+                    functionProto.call(this.nativeMethods.documentAddEventListener, el.contentDocument, 'ready', readyHandler);
             }
             else {
                 var handler = () => {
                     if (!isShadowUIElement(el)) {
                         if (isCrossDomainIframe(el))
-                            this.nativeMethods.removeEventListener.call(el, 'load', handler);
+                            functionProto.call(this.nativeMethods.removeEventListener, el, 'load', handler);
                         else
                             this._raiseReadyToInitEvent(el);
                     }
@@ -130,14 +131,14 @@ export default class IframeSandbox extends SandboxBase {
                 if (isElementInDocument(el))
                     this._raiseReadyToInitEvent(el);
 
-                this.nativeMethods.addEventListener.call(el, 'load', handler);
+                functionProto.call(this.nativeMethods.addEventListener, el, 'load', handler);
             }
         }
         else {
             if (isElementInDocument(el))
                 this._raiseReadyToInitEvent(el);
 
-            this.nativeMethods.addEventListener.call(el, 'load', () => this._raiseReadyToInitEvent(el));
+            functionProto.call(this.nativeMethods.addEventListener, el, 'load', () => this._raiseReadyToInitEvent(el));
         }
     }
 }

@@ -1,4 +1,10 @@
+// -------------------------------------------------------------
+// WARNING: this file is used by both the client and the server.
+// Do not use any browser or node-specific API!
+// -------------------------------------------------------------
+
 import {lineBreakG} from "./whitespace"
+import { regExpProto } from '../../../../protos';
 
 // These are used when `options.locations` is on, for the
 // `startLoc` and `endLoc` properties.
@@ -31,7 +37,7 @@ export class SourceLocation {
 export function getLineInfo(input, offset) {
   for (let line = 1, cur = 0;;) {
     lineBreakG.lastIndex = cur
-    let match = lineBreakG.exec(input)
+    let match = regExpProto.exec(lineBreakG, input)
     if (match && match.index < offset) {
       ++line
       cur = match.index + match[0].length

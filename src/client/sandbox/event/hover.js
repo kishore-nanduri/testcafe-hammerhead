@@ -2,6 +2,7 @@ import INTERNAL_ATTRS from '../../../processing/dom/internal-attributes';
 import SandboxBase from '../base';
 import nativeMethods from '../native-methods';
 import * as domUtils from '../../utils/dom';
+import { functionProto } from '../../../protos';
 
 export default class HoverSandbox extends SandboxBase {
     constructor (listeners) {
@@ -15,12 +16,12 @@ export default class HoverSandbox extends SandboxBase {
 
     static _setHoverMarker (newHoveredElement, jointParent) {
         if (jointParent)
-            nativeMethods.setAttribute.call(jointParent, INTERNAL_ATTRS.hoverPseudoClass, '');
+            functionProto.call(nativeMethods.setAttribute, jointParent, INTERNAL_ATTRS.hoverPseudoClass, '');
 
         while (newHoveredElement && newHoveredElement.tagName) {
             // NOTE: Assign a pseudo-class marker to the elements until the joint parent is found.
             if (newHoveredElement !== jointParent) {
-                nativeMethods.setAttribute.call(newHoveredElement, INTERNAL_ATTRS.hoverPseudoClass, '');
+                functionProto.call(nativeMethods.setAttribute, newHoveredElement, INTERNAL_ATTRS.hoverPseudoClass, '');
                 newHoveredElement = newHoveredElement.parentNode;
             }
             else
@@ -40,7 +41,7 @@ export default class HoverSandbox extends SandboxBase {
             while (el && el.tagName) {
                 // NOTE: Check that the current element is a joint parent for the hovered elements.
                 if (el.contains && !el.contains(newHoveredElement)) {
-                    nativeMethods.removeAttribute.call(el, INTERNAL_ATTRS.hoverPseudoClass);
+                    functionProto.call(nativeMethods.removeAttribute, el, INTERNAL_ATTRS.hoverPseudoClass);
                     el = el.parentNode;
                 }
                 else
@@ -50,7 +51,7 @@ export default class HoverSandbox extends SandboxBase {
             jointParent = el;
 
             if (jointParent)
-                nativeMethods.removeAttribute.call(jointParent, INTERNAL_ATTRS.hoverPseudoClass);
+                functionProto.call(nativeMethods.removeAttribute, jointParent, INTERNAL_ATTRS.hoverPseudoClass);
         }
 
         return jointParent;

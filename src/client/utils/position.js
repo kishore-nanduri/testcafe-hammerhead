@@ -2,6 +2,7 @@ import nativeMethods from '../sandbox/native-methods';
 import * as domUtils from './dom';
 import * as styleUtils from './style';
 import { isFirefox, isIE } from './browser';
+import { stringProto, regExpProto, functionProto } from '../../protos';
 
 function getAreaElementRectangle (el, mapContainer) {
     var shape  = el.getAttribute('shape');
@@ -14,7 +15,7 @@ function getAreaElementRectangle (el, mapContainer) {
     if (!shape || !coords)
         return null;
 
-    coords = coords.split(',');
+    coords = stringProto.split(coords, ',');
 
     if (!coords.length)
         return null;
@@ -90,9 +91,9 @@ function getMapElementRectangle (el) {
     var mapContainer = domUtils.getMapContainer(el);
 
     if (mapContainer) {
-        if (/^map$/i.test(el.tagName))
+        if (regExpProto.test(/^map$/i, el.tagName))
             return getElementRectangle(mapContainer);
-        else if (/^area$/i.test(el.tagName)) {
+        else if (regExpProto.test(/^area$/i, el.tagName)) {
             var areaElementRectangle = getAreaElementRectangle(el, mapContainer);
 
             if (areaElementRectangle)
@@ -134,7 +135,7 @@ function getSelectChildRectangle (el) {
 
 function getSvgElementRelativeRectangle (el) {
     var isSvgTextElement   = domUtils.matches(el, 'tspan') || domUtils.matches(el, 'tref') ||
-                             el.tagName && el.tagName.toLowerCase() === 'textpath';
+                             el.tagName && stringProto.toLowerCase(el.tagName) === 'textpath';
     var boundingClientRect = el.getBoundingClientRect();
     var elementRect        = {
         height: !isSvgTextElement ? boundingClientRect.height : el.offsetHeight,
@@ -161,10 +162,10 @@ function getSvgElementRelativeRectangle (el) {
     if (isFirefox || isIE)
         return elementRect;
 
-    var strokeWidth = nativeMethods.getAttribute.call(el, 'stroke-width') || styleUtils.get(el, 'stroke-width');
+    var strokeWidth = functionProto.call(nativeMethods.getAttribute, el, 'stroke-width') || styleUtils.get(el, 'stroke-width');
 
     // NOTE: We assume that the 'stroke-width' attribute can only be set in pixels.
-    strokeWidth = strokeWidth ? +strokeWidth.replace(/px|em|ex|pt|pc|cm|mm|in/, '') : 1;
+    strokeWidth = strokeWidth ? +stringProto.replace(strokeWidth, /px|em|ex|pt|pc|cm|mm|in/, '') : 1;
 
     if (strokeWidth && +strokeWidth % 2 !== 0)
         strokeWidth = +strokeWidth + 1;

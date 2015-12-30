@@ -2,6 +2,7 @@ import SandboxBase from '../base';
 import nativeMethods from '../native-methods';
 import createPropertyDesc from '../../utils/create-property-desc.js';
 import { isFirefox, isIE9, isIE10 } from '../../utils/browser';
+import { objectStatic, stringProto, regExpProto, functionProto } from '../../../protos';
 
 export default class UnloadSandbox extends SandboxBase {
     constructor (listeners) {
@@ -32,7 +33,7 @@ export default class UnloadSandbox extends SandboxBase {
 
     _onBeforeUnloadHandler (e, originListener) {
         // NOTE: Overriding the returnValue property to prevent a native dialog.
-        Object.defineProperty(e, 'returnValue', createPropertyDesc({
+        objectStatic.defineProperty(e, 'returnValue', createPropertyDesc({
             get: () => this.storedBeforeUnloadReturnValue,
             set: value => {
                 // NOTE: In all browsers, if the property is set to any value, unload is prevented. In FireFox,
@@ -43,7 +44,7 @@ export default class UnloadSandbox extends SandboxBase {
             }
         }));
 
-        Object.defineProperty(e, 'preventDefault', createPropertyDesc({
+        objectStatic.defineProperty(e, 'preventDefault', createPropertyDesc({
             get: () => () => this.prevented = true,
             set: () => void 0
         }));
@@ -65,17 +66,17 @@ export default class UnloadSandbox extends SandboxBase {
         listeners.setEventListenerWrapper(window, ['beforeunload'], (e, listener) => this._onBeforeUnloadHandler(e, listener));
         listeners.addInternalEventListener(window, ['unload'], () => this.emit(this.UNLOAD_EVENT));
 
-        nativeMethods.addEventListener.call(document, 'click', e => {
+        functionProto.call(nativeMethods.addEventListener, document, 'click', e => {
             var target = e.target || e.srcElement;
 
-            if ((isIE9 || isIE10) && target.tagName && target.tagName.toLowerCase() === 'a') {
-                var href = nativeMethods.getAttribute.call(target, 'href');
+            if ((isIE9 || isIE10) && target.tagName && stringProto.toLowerCase(target.tagName) === 'a') {
+                var href = functionProto.call(nativeMethods.getAttribute, target, 'href');
 
-                this.isFakeIEBeforeUnloadEvent = /(^javascript:)|(^mailto:)|(^tel:)|(^#)/.test(href);
+                this.isFakeIEBeforeUnloadEvent = regExpProto.test(/(^javascript:)|(^mailto:)|(^tel:)|(^#)/, href);
             }
         });
 
-        nativeMethods.windowAddEventListener.call(window, 'beforeunload', () => this._emitBeforeUnloadEvent());
+        functionProto.call(nativeMethods.windowAddEventListener, window, 'beforeunload', () => this._emitBeforeUnloadEvent());
 
         listeners.addInternalEventListener(window, ['beforeunload'], () =>
                 this.emit(this.BEFORE_BEFORE_UNLOAD_EVENT, {
@@ -86,8 +87,8 @@ export default class UnloadSandbox extends SandboxBase {
         listeners.on(listeners.EVENT_LISTENER_ATTACHED_EVENT, e => {
             if (e.el === window && e.eventType === 'beforeunload') {
                 // NOTE: reattach Listener, it'll be last in the queue.
-                nativeMethods.windowRemoveEventListener.call(window, 'beforeunload', () => this._emitBeforeUnloadEvent());
-                nativeMethods.windowAddEventListener.call(window, 'beforeunload', () => this._emitBeforeUnloadEvent());
+                functionProto.call(nativeMethods.windowRemoveEventListener, window, 'beforeunload', () => this._emitBeforeUnloadEvent());
+                functionProto.call(nativeMethods.windowAddEventListener, window, 'beforeunload', () => this._emitBeforeUnloadEvent());
             }
         });
     }
@@ -100,8 +101,8 @@ export default class UnloadSandbox extends SandboxBase {
             window.onbeforeunload = e => this._onBeforeUnloadHandler(e, value);
 
             // NOTE: reattach Listener, it'll be last in the queue.
-            nativeMethods.windowRemoveEventListener.call(window, 'beforeunload', () => this._emitBeforeUnloadEvent());
-            nativeMethods.windowAddEventListener.call(window, 'beforeunload', () => this._emitBeforeUnloadEvent());
+            functionProto.call(nativeMethods.windowRemoveEventListener, window, 'beforeunload', () => this._emitBeforeUnloadEvent());
+            functionProto.call(nativeMethods.windowAddEventListener, window, 'beforeunload', () => this._emitBeforeUnloadEvent());
         }
         else {
             this.storedBeforeUnloadHandler = null;

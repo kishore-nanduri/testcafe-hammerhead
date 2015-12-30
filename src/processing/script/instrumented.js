@@ -3,6 +3,8 @@
 // Do not use any browser or node-specific API!
 // -------------------------------------------------------------
 
+import { arrayProto, regExpProto } from '../../protos';
+
 // NOTE: constants are exported for the testing purposes
 export const METHODS = [
     'querySelector',
@@ -59,17 +61,17 @@ export const PROPERTIES = [
     'which'
 ];
 
-const INSTRUMENTED_METHOD_RE   = new RegExp(`^(${METHODS.join('|')})$`);
-const INSTRUMENTED_PROPERTY_RE = new RegExp(`^(${PROPERTIES.join('|')})$`);
+const INSTRUMENTED_METHOD_RE   = new RegExp(`^(${arrayProto.join(METHODS, '|')})$`);
+const INSTRUMENTED_PROPERTY_RE = new RegExp(`^(${arrayProto.join(PROPERTIES, '|')})$`);
 
 // NOTE: we can't use the map approach here, because
 // cases like `WRAPPABLE_METHOD['toString']` will fail.
 // We could use the hasOwnProperty test, but it is
 // significantly slower than the regular expression test
 export function shouldInstrumentMethod (name) {
-    return INSTRUMENTED_METHOD_RE.test(name);
+    return regExpProto.test(INSTRUMENTED_METHOD_RE, name);
 }
 
 export function shouldInstrumentProperty (name) {
-    return INSTRUMENTED_PROPERTY_RE.test(name);
+    return regExpProto.test(INSTRUMENTED_PROPERTY_RE, name);
 }

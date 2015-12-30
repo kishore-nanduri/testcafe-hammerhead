@@ -1,4 +1,5 @@
 import trim from '../../utils/string-trim';
+import { regExpProto, stringProto, arrayProto } from '../../protos';
 
 // NOTE: The name/key cannot be empty, but the value can.
 const COOKIE_PAIR_REGEX        = /^([^=;]+)\s*=\s*(("?)[^\n\r\0]*\3)/;
@@ -7,14 +8,14 @@ const TRAILING_SEMICOLON_REGEX = /;+$/;
 export function parse (str) {
     str = trim(str);
 
-    var trailingSemicolonCheck = TRAILING_SEMICOLON_REGEX.exec(str);
+    var trailingSemicolonCheck = regExpProto.exec(TRAILING_SEMICOLON_REGEX, str);
 
     if (trailingSemicolonCheck)
-        str = str.slice(0, trailingSemicolonCheck.index);
+        str = stringProto.slice(str, 0, trailingSemicolonCheck.index);
 
-    var firstSemicolonIdx     = str.indexOf(';');
-    var keyValueString        = firstSemicolonIdx > -1 ? str.substr(0, firstSemicolonIdx) : str;
-    var keyValueParsingResult = COOKIE_PAIR_REGEX.exec(keyValueString);
+    var firstSemicolonIdx     = arrayProto.indexOf(str, ';');
+    var keyValueString        = firstSemicolonIdx > -1 ? stringProto.substr(str, 0, firstSemicolonIdx) : str;
+    var keyValueParsingResult = regExpProto.exec(COOKIE_PAIR_REGEX, keyValueString);
 
     if (!keyValueParsingResult)
         return null;
@@ -30,27 +31,27 @@ export function parse (str) {
     if (firstSemicolonIdx === -1)
         return parsedCookie;
 
-    var attributesString = trim(str.slice(firstSemicolonIdx).replace(/^\s*;\s*/, ''));
+    var attributesString = trim(stringProto.replace(stringProto.slice(str, firstSemicolonIdx), /^\s*;\s*/, ''));
 
     if (attributesString.length === 0)
         return parsedCookie;
 
-    var attrValStrings = attributesString.split(/\s*;\s*/);
+    var attrValStrings = stringProto.split(attributesString, /\s*;\s*/);
 
     while (attrValStrings.length) {
-        var attrValueStr = attrValStrings.shift();
-        var separatorIdx = attrValueStr.indexOf('=');
+        var attrValueStr = arrayProto.shift(attrValStrings);
+        var separatorIdx = stringProto.indexOf(attrValueStr, '=');
         var key          = null;
         var value        = null;
 
         if (separatorIdx === -1)
             key = attrValueStr;
         else {
-            key   = attrValueStr.substr(0, separatorIdx);
-            value = trim(attrValueStr.substr(separatorIdx + 1));
+            key   = stringProto.substr(attrValueStr, 0, separatorIdx);
+            value = trim(stringProto.substr(attrValueStr, separatorIdx + 1));
         }
 
-        key = trim(key.toLowerCase());
+        key = trim(stringProto.toLowerCase(key));
 
         switch (key) {
             case 'expires':
@@ -66,7 +67,7 @@ export function parse (str) {
 
             case 'domain':
                 // NOTE: Remove leading '.'.
-                parsedCookie.domain = trim(value.replace(/^\./, ''));
+                parsedCookie.domain = trim(stringProto.replace(value, /^\./, ''));
                 break;
 
             default:
@@ -103,12 +104,12 @@ export function format (parsedCookie) {
 }
 
 export function get (document, name) {
-    var cookies = document.cookie.split(';');
+    var cookies = stringProto.split(document.cookie, ';');
 
     for (var i = 0; i < cookies.length; i++) {
         var cookie = trim(cookies[i]);
 
-        if (cookie.indexOf(name + '=') === 0 || cookie === name)
+        if (stringProto.indexOf(cookie, name + '=') === 0 || cookie === name)
             return cookie;
     }
 

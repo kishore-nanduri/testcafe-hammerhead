@@ -5,6 +5,7 @@
 
 import { Syntax } from '../tools/esotope';
 import { createTempVarIdentifier, createAssignmentExprStmt, createVarDeclaration } from '../node-builder';
+import { arrayProto } from '../../../protos';
 
 // Transform:
 // for(obj[prop] in src), for(obj.prop in src) -->
@@ -20,7 +21,7 @@ export default {
     run: node => {
         var tempVarAst = createTempVarIdentifier();
 
-        node.body.body.unshift(createAssignmentExprStmt(node.left, tempVarAst));
+        arrayProto.unshift(node.body.body, createAssignmentExprStmt(node.left, tempVarAst));
 
         node.left = createVarDeclaration(tempVarAst);
 

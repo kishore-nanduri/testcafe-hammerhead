@@ -4,6 +4,7 @@ import nativeMethods from '../native-methods';
 import { getProxyUrl } from '../../utils/url';
 import XHR_HEADERS from '../../../request-pipeline/xhr/headers';
 import { getOrigin } from '../../utils/destination-location';
+import { functionProto } from '../../../protos';
 
 export default class XhrSandbox extends SandboxBase {
     constructor (sandbox) {
@@ -24,7 +25,7 @@ export default class XhrSandbox extends SandboxBase {
         var xhrSandbox = this;
 
         xhr.abort = () => {
-            abort.call(xhr);
+            functionProto.call(abort, xhr);
             this.emit(this.XHR_ERROR_EVENT, {
                 err: new Error('XHR aborted'),
                 xhr: xhr
@@ -46,9 +47,9 @@ export default class XhrSandbox extends SandboxBase {
             // NOTE: The 'async' argument is true by default. However, when the 'async' argument is set to â€˜undefinedâ€™,
             // a browser (Chrome, FireFox) sets it to 'false', and a request becomes synchronous (B238528).
             if (arguments.length === 2)
-                open.call(xhr, method, url);
+                functionProto.call(open, xhr, method, url);
             else
-                open.call(xhr, method, url, async, user, password);
+                functionProto.call(open, xhr, method, url, async, user, password);
         };
 
         xhr.send = function () {
@@ -66,7 +67,7 @@ export default class XhrSandbox extends SandboxBase {
             else {
                 // NOTE: Get out of the current execution tick and then proxy onreadystatechange,
                 // because jQuery assigns a handler after the send() method was called.
-                nativeMethods.setTimeout.call(xhrSandbox.window, () => {
+                functionProto.call(nativeMethods.setTimeout, xhrSandbox.window, () => {
                     // NOTE: If the state is already changed, we just call the handler without proxying
                     // onreadystatechange.
                     if (xhr.readyState === 4)
@@ -77,7 +78,7 @@ export default class XhrSandbox extends SandboxBase {
 
                         xhr.onreadystatechange = progress => {
                             orscHandler();
-                            originalHandler.call(xhr, progress);
+                            functionProto.call(originalHandler, xhr, progress);
                         };
                     }
                     else
@@ -99,7 +100,7 @@ export default class XhrSandbox extends SandboxBase {
             if (xhr.withCredentials)
                 xhr.setRequestHeader(XHR_HEADERS.withCredentials, 'true');
 
-            send.apply(xhr, arguments);
+            functionProto.apply(send, xhr, arguments);
         };
     }
 

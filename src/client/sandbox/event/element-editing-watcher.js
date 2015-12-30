@@ -1,5 +1,6 @@
 import nativeMethods from '../native-methods';
 import { isTextEditableElementAndEditingAllowed, isShadowUIElement } from '../../utils/dom';
+import { functionProto } from '../../../protos';
 
 const ELEMENT_EDITING_OBSERVED_FLAG = 'hammerhead|element-editing-observed';
 const OLD_VALUE_PROPERTY            = 'hammerhead|old-value';
@@ -22,8 +23,8 @@ export default class ElementEditingWatcher {
 
     stopWatching (el) {
         if (el) {
-            nativeMethods.removeEventListener.call(el, 'blur', e => this._onBlur(e));
-            nativeMethods.removeEventListener.call(el, 'change', e => this._onChange(e));
+            functionProto.call(nativeMethods.removeEventListener, el, 'blur', e => this._onBlur(e));
+            functionProto.call(nativeMethods.removeEventListener, el, 'change', e => this._onChange(e));
 
             if (el[ELEMENT_EDITING_OBSERVED_FLAG])
                 delete el[ELEMENT_EDITING_OBSERVED_FLAG];
@@ -40,9 +41,8 @@ export default class ElementEditingWatcher {
             el[ELEMENT_EDITING_OBSERVED_FLAG] = true;
             el[OLD_VALUE_PROPERTY]            = el.value;
 
-
-            nativeMethods.addEventListener.call(el, 'blur', e => this._onBlur(e));
-            nativeMethods.addEventListener.call(el, 'change', e => this._onChange(e));
+            functionProto.call(nativeMethods.addEventListener, el, 'blur', e => this._onBlur(e));
+            functionProto.call(nativeMethods.addEventListener, el, 'change', e => this._onChange(e));
         }
     }
 

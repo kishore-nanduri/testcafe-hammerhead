@@ -1,3 +1,8 @@
+// -------------------------------------------------------------
+// WARNING: this file is used by both the client and the server.
+// Do not use any browser or node-specific API!
+// -------------------------------------------------------------
+
 // The algorithm used to determine whether a regexp can appear at a
 // given point in the program is loosely based on sweet.js' approach.
 // See https://github.com/mozilla/sweet.js/wiki/design
@@ -5,6 +10,7 @@
 import {Parser} from "./state"
 import {types as tt} from "./tokentype"
 import {lineBreak} from "./whitespace"
+import { regExpProto, stringProto, functionProto, arrayProto } from '../../../../protos';
 
 export class TokContext {
   constructor(token, isExpr, preserveSpace, override) {
@@ -38,7 +44,7 @@ pp.braceIsBlock = function(prevType) {
       return !parent.isExpr
   }
   if (prevType === tt._return)
-    return lineBreak.test(this.input.slice(this.lastTokEnd, this.start))
+    return regExpProto.test(lineBreak, stringProto.slice(this.input, this.lastTokEnd, this.start))
   if (prevType === tt._else || prevType === tt.semi || prevType === tt.eof || prevType === tt.parenR)
     return true
   if (prevType == tt.braceL)
@@ -51,7 +57,7 @@ pp.updateContext = function(prevType) {
   if (type.keyword && prevType == tt.dot)
     this.exprAllowed = false
   else if (update = type.updateContext)
-    update.call(this, prevType)
+    functionProto.call(update, this, prevType)
   else
     this.exprAllowed = type.beforeExpr
 }
@@ -63,9 +69,9 @@ tt.parenR.updateContext = tt.braceR.updateContext = function() {
     this.exprAllowed = true
     return
   }
-  let out = this.context.pop()
+  let out = arrayProto.pop(this.context)
   if (out === types.b_stat && this.curContext() === types.f_expr) {
-    this.context.pop()
+    arrayProto.pop(this.context)
     this.exprAllowed = false
   } else if (out === types.b_tmpl) {
     this.exprAllowed = true
@@ -75,18 +81,18 @@ tt.parenR.updateContext = tt.braceR.updateContext = function() {
 }
 
 tt.braceL.updateContext = function(prevType) {
-  this.context.push(this.braceIsBlock(prevType) ? types.b_stat : types.b_expr)
+  arrayProto.push(this.context, this.braceIsBlock(prevType) ? types.b_stat : types.b_expr)
   this.exprAllowed = true
 }
 
 tt.dollarBraceL.updateContext = function() {
-  this.context.push(types.b_tmpl)
+  arrayProto.push(this.context, types.b_tmpl)
   this.exprAllowed = true
 }
 
 tt.parenL.updateContext = function(prevType) {
   let statementParens = prevType === tt._if || prevType === tt._for || prevType === tt._with || prevType === tt._while
-  this.context.push(statementParens ? types.p_stat : types.p_expr)
+  arrayProto.push(this.context, statementParens ? types.p_stat : types.p_expr)
   this.exprAllowed = true
 }
 
@@ -96,14 +102,14 @@ tt.incDec.updateContext = function() {
 
 tt._function.updateContext = function() {
   if (this.curContext() !== types.b_stat)
-    this.context.push(types.f_expr)
+    arrayProto.push(this.context, types.f_expr)
   this.exprAllowed = false
 }
 
 tt.backQuote.updateContext = function() {
   if (this.curContext() === types.q_tmpl)
-    this.context.pop()
+    arrayProto.pop(this.context)
   else
-    this.context.push(types.q_tmpl)
+    arrayProto.push(this.context, types.q_tmpl)
   this.exprAllowed = false
 }

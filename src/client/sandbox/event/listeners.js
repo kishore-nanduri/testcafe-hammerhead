@@ -3,6 +3,7 @@ import EventEmitter from '../../utils/event-emitter';
 import * as listeningCtx from './listening-context';
 import { preventDefault, stopPropagation, DOM_EVENTS, isObjectEventListener } from '../../utils/event';
 import { isWindow } from '../../utils/dom';
+import { functionProto, arrayProto, objectStatic } from '../../../protos';
 
 const LISTENED_EVENTS = [
     'click', 'mousedown', 'mouseup', 'dblclick', 'contextmenu', 'mousemove', 'mouseover', 'mouseout',
@@ -33,7 +34,7 @@ export default class Listeners extends EventEmitter {
             if (documentEventCtx.cancelOuterHandlers)
                 return null;
 
-            return listener.call(this, e);
+            return functionProto.call(listener, this, e);
         };
     }
 
@@ -58,12 +59,12 @@ export default class Listeners extends EventEmitter {
                 return null;
 
             if (typeof eventCtx.outerHandlersWrapper === 'function')
-                return eventCtx.outerHandlersWrapper.call(this, e, listener);
+                return functionProto.call(eventCtx.outerHandlersWrapper, this, e, listener);
 
             if (isObjectEventListener(listener))
-                return listener.handleEvent.call(listener, e);
+                return functionProto.call(listener.handleEvent, listener, e);
 
-            return listener.call(this, e);
+            return functionProto.call(listener, this, e);
         };
     }
 
@@ -110,7 +111,7 @@ export default class Listeners extends EventEmitter {
             };
 
             for (var i = 0; i < internalHandlers.length; i++) {
-                internalHandlers[i].call(el, e, !!window[EVENT_SANDBOX_DISPATCH_EVENT_FLAG], preventEvent, cancelHandlers, stopEventPropagation);
+                functionProto.call(internalHandlers[i], el, e, !!window[EVENT_SANDBOX_DISPATCH_EVENT_FLAG], preventEvent, cancelHandlers, stopEventPropagation);
 
                 if (eventPrevented || stopPropagationCalled)
                     break;
@@ -128,12 +129,11 @@ export default class Listeners extends EventEmitter {
                 var eventListeningInfo = listeningCtx.getEventCtx(el, type);
 
                 if (!eventListeningInfo)
-                    return nativeAddEventListener.call(this, type, listener, useCapture);
+                    return functionProto.call(nativeAddEventListener, this, type, listener, useCapture);
 
                 // NOTE: T233158
-                var isDifferentHandler = eventListeningInfo.outerHandlers.every(value => value.fn !== listener ||
-                                                                                         value.useCapture !==
-                                                                                         useCapture);
+                var isDifferentHandler = arrayProto.every(eventListeningInfo.outerHandlers,
+                        value => value.fn !== listener || value.useCapture !== useCapture);
 
                 if (!isDifferentHandler)
                     return null;
@@ -142,7 +142,7 @@ export default class Listeners extends EventEmitter {
 
                 listeningCtx.wrapEventListener(eventListeningInfo, listener, wrapper, useCapture);
 
-                var res = nativeAddEventListener.call(this, type, wrapper, useCapture);
+                var res = functionProto.call(nativeAddEventListener, this, type, wrapper, useCapture);
 
                 listeners.emit(listeners.EVENT_LISTENER_ATTACHED_EVENT, {
                     el:        this,
@@ -157,9 +157,9 @@ export default class Listeners extends EventEmitter {
                 var eventCtx = listeningCtx.getEventCtx(this, type);
 
                 if (!eventCtx)
-                    return nativeRemoveEventListener.call(this, type, listener, useCapture);
+                    return functionProto.call(nativeRemoveEventListener, this, type, listener, useCapture);
 
-                return nativeRemoveEventListener.call(this, type, listeningCtx.getWrapper(eventCtx, listener, useCapture), useCapture);
+                return functionProto.call(nativeRemoveEventListener, this, type, listeningCtx.getWrapper(eventCtx, listener, useCapture), useCapture);
             }
         };
     }
@@ -175,12 +175,11 @@ export default class Listeners extends EventEmitter {
                 var eventListeningInfo    = listeningCtx.getEventCtx(this, type);
 
                 if (!docEventListeningInfo)
-                    return nativeAddEventListener.call(this, type, listener, useCapture);
+                    return functionProto.call(nativeAddEventListener, this, type, listener, useCapture);
 
                 // NOTE: T233158
-                var isDifferentHandler = eventListeningInfo.outerHandlers.every(value => value.fn !== listener ||
-                                                                                         value.useCapture !==
-                                                                                         useCapture);
+                var isDifferentHandler = arrayProto.every(eventListeningInfo.outerHandlers,
+                        value => value.fn !== listener || value.useCapture !== useCapture);
 
                 if (!isDifferentHandler)
                     return null;
@@ -189,7 +188,7 @@ export default class Listeners extends EventEmitter {
 
                 listeningCtx.wrapEventListener(eventListeningInfo, listener, wrapper, useCapture);
 
-                var res = nativeAddEventListener.call(this, type, wrapper, useCapture);
+                var res = functionProto.call(nativeAddEventListener, this, type, wrapper, useCapture);
 
                 listeners.emit(listeners.EVENT_LISTENER_ATTACHED_EVENT, {
                     el:        this,
@@ -204,9 +203,9 @@ export default class Listeners extends EventEmitter {
                 var eventListeningInfo = listeningCtx.getEventCtx(this, type);
 
                 if (!eventListeningInfo)
-                    return nativeRemoveEventListener.call(this, type, listener, useCapture);
+                    return functionProto.call(nativeRemoveEventListener, this, type, listener, useCapture);
 
-                return nativeRemoveEventListener.call(this, type, listeningCtx.getWrapper(eventListeningInfo, listener, useCapture), useCapture);
+                return functionProto.call(nativeRemoveEventListener, this, type, listeningCtx.getWrapper(eventListeningInfo, listener, useCapture), useCapture);
             }
         };
     }
@@ -219,7 +218,7 @@ export default class Listeners extends EventEmitter {
         this.listeningCtx.addListeningElement(el, events);
 
         for (var i = 0; i < events.length; i++)
-            nativeAddEventListener.call(el, events[i], this._createEventHandler(), true);
+            functionProto.call(nativeAddEventListener, el, events[i], this._createEventHandler(), true);
 
         var overridedMethods = this._createElementOverridedMethods(el);
 
@@ -240,8 +239,10 @@ export default class Listeners extends EventEmitter {
         var nativeAddEventListener = Listeners._getNativeAddEventListener(el);
         var elementCtx             = this.listeningCtx.getElementCtx(el);
 
-        if (elementCtx)
-            Object.keys(elementCtx).forEach(event => nativeAddEventListener.call(el, event, this._createEventHandler(), true));
+        if (elementCtx) {
+            arrayProto.forEach(objectStatic.keys(elementCtx),
+                    event => functionProto.call(nativeAddEventListener, el, event, this._createEventHandler(), true));
+        }
     }
 
     cancelElementListening (el) {

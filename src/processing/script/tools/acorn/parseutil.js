@@ -1,6 +1,12 @@
+// -------------------------------------------------------------
+// WARNING: this file is used by both the client and the server.
+// Do not use any browser or node-specific API!
+// -------------------------------------------------------------
+
 import {types as tt} from "./tokentype"
 import {Parser} from "./state"
 import {lineBreak} from "./whitespace"
+import { regExpProto, stringProto } from '../../../../protos';
 
 const pp = Parser.prototype
 
@@ -47,7 +53,7 @@ pp.expectContextual = function(name) {
 pp.canInsertSemicolon = function() {
   return this.type === tt.eof ||
     this.type === tt.braceR ||
-    lineBreak.test(this.input.slice(this.lastTokEnd, this.start))
+    regExpProto.test(lineBreak, stringProto.slice(this.input, this.lastTokEnd, this.start))
 }
 
 pp.insertSemicolon = function() {
