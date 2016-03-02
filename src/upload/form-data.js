@@ -72,6 +72,18 @@ export default class FormData {
         }
     }
 
+    processCookie (sessionCookies) {
+        var cookieEntry = this.getEntriesByName(INTERNAL_ATTRS.cookieHiddenInputName)[0];
+
+        if (cookieEntry) {
+            var body       = Buffer.concat(cookieEntry.body).toString();
+            var cookieInfo = JSON.parse(body);
+
+            this._removeEntry(INTERNAL_ATTRS.cookieHiddenInputName);
+            sessionCookies.setByClient(cookieInfo.url, cookieInfo.cookie.split(';'));
+        }
+    }
+
     parseContentTypeHeader (header) {
         header = String(header);
 

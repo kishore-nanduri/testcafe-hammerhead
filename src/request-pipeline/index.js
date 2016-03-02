@@ -90,7 +90,7 @@ var stages = {
 
 // Utils
 function createReqOpts (ctx) {
-    var bodyWithUploads = injectUpload(ctx.req.headers['content-type'], ctx.reqBody);
+    var bodyWithUploads = injectUpload(ctx.req.headers['content-type'], ctx.reqBody, ctx.session.cookies);
 
     // NOTE: First, we should rewrite the request body, because the 'content-length' header will be built based on it.
     if (bodyWithUploads)

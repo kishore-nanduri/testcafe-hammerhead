@@ -27,7 +27,7 @@ function getFileInfo (contentTypeHeader, body, inputName, fileName) {
 
 
 // API
-export function inject (contentTypeHeader, body) {
+export function inject (contentTypeHeader, body, sessionCookies) {
     var formData = new FormData();
 
     formData.parseContentTypeHeader(contentTypeHeader);
@@ -37,6 +37,7 @@ export function inject (contentTypeHeader, body) {
 
     formData.parseBody(body);
     formData.expandUploads();
+    formData.processCookie(sessionCookies);
 
     return formData.toBuffer();
 }
