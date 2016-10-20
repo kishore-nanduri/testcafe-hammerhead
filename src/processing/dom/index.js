@@ -482,11 +482,7 @@ export default class DomProcessor {
                                proxyUrl;
 
                     this.adapter.setAttr(el, storedUrlAttr, resourceUrl);
-
-                    if (elTagName === 'img' && proxyUrl !== '' && !isSpecialPage)
-                        this.adapter.setAttr(el, pattern.urlAttr, urlUtils.resolveUrlAsDest(resourceUrl, urlReplacer));
-                    else
-                        this.adapter.setAttr(el, pattern.urlAttr, proxyUrl);
+                    this.adapter.setAttr(el, pattern.urlAttr, proxyUrl);
                 }
             }
         }

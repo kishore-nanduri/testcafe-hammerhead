@@ -10,7 +10,7 @@ import * as domUtils from '../../utils/dom';
 import * as hiddenInfo from '../upload/hidden-info';
 import * as urlResolver from '../../utils/url-resolver';
 import { sameOriginCheck, get as getDestLocation } from '../../utils/destination-location';
-import { stopPropagation } from '../../utils/event';
+//import { stopPropagation } from '../../utils/event';
 import { isPageHtml, processHtml } from '../../utils/html';
 import transport from '../../transport';
 import getNativeQuerySelectorAll from '../../utils/get-native-query-selector-all';
@@ -581,16 +581,16 @@ export default class ElementSandbox extends SandboxBase {
         });
     }
 
-    _setProxiedSrcUrlOnError (img) {
-        img.addEventListener('error', e => {
-            var storedAttr = nativeMethods.getAttribute.call(img, domProcessor.getStoredAttrName('src'));
-
-            if (storedAttr && !urlUtils.parseProxyUrl(img.src) &&
-                urlUtils.isSupportedProtocol(img.src) && !urlUtils.isSpecialPage(img.src)) {
-                nativeMethods.setAttribute.call(img, 'src', urlUtils.getProxyUrl(storedAttr));
-                stopPropagation(e);
-            }
-        }, false);
+    _setProxiedSrcUrlOnError (/*img*/) {
+        //img.addEventListener('error', e => {
+        //    var storedAttr = nativeMethods.getAttribute.call(img, domProcessor.getStoredAttrName('src'));
+        //
+        //    if (storedAttr && !urlUtils.parseProxyUrl(img.src) &&
+        //        urlUtils.isSupportedProtocol(img.src) && !urlUtils.isSpecialPage(img.src)) {
+        //        nativeMethods.setAttribute.call(img, 'src', urlUtils.getProxyUrl(storedAttr));
+        //        stopPropagation(e);
+        //    }
+        //}, false);
     }
 
     getTarget (el, currentTarget) {
